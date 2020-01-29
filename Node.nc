@@ -51,6 +51,8 @@ implementation{
       dbg(GENERAL_CHANNEL, "Packet Received\n");
       if(len==sizeof(pack)){
          pack* myMsg=(pack*) payload;
+         dbg(GENERAL_CHANNEL, "Received Packet below\n");
+         logPack(myMsg);
          dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
          return msg;
       }
@@ -62,6 +64,8 @@ implementation{
    event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
       dbg(GENERAL_CHANNEL, "PING EVENT \n");
       makePack(&sendPackage, TOS_NODE_ID, destination, 0, 0, 0, payload, PACKET_MAX_PAYLOAD_SIZE);
+      dbg(GENERAL_CHANNEL, "Sending Packet below\n");
+      logPack(&sendPackage);
       call Sender.send(sendPackage, destination);
    }
 
