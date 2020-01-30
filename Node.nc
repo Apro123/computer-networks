@@ -66,6 +66,7 @@ implementation{
       makePack(&sendPackage, TOS_NODE_ID, destination, 0, 0, 0, payload, PACKET_MAX_PAYLOAD_SIZE);
       dbg(GENERAL_CHANNEL, "Sending Packet below\n");
       logPack(&sendPackage);
+      dbg(FLOODING_CHANNEL, "test of flooding channel\n");
       call Sender.send(sendPackage, destination);
    }
 

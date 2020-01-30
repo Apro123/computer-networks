@@ -23,10 +23,10 @@ def main():
 
     # After sending a ping, simulate a little to prevent collision.
     s.runTime(1);
-    s.ping(1, 2, "Hello, World"); #max 20 characters
+    s.ping(2, 3, "Hello, World");
     s.runTime(1);
 
-    s.ping(1, 10, "coronavirus");
+    s.ping(1, 10, "Hi!");
     s.runTime(1);
 
 if __name__ == '__main__':
