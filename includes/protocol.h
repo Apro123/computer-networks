@@ -1,4 +1,4 @@
-m//Author: UCM ANDES Lab
+//Author: UCM ANDES Lab
 //$Author: abeltran2 $
 //$LastChangedDate: 2014-06-16 13:16:24 -0700 (Mon, 16 Jun 2014) $
 
