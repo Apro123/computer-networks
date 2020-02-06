@@ -24,8 +24,9 @@ module Node{
    uses interface CommandHandler;
 
 // Neighbor discovery
-   uses interface Timer<TMilli> as neighborTimer; // timer for neighbor discovery
-   uses interface List<uint16_t> as neighborList; // lists for all the possible nodes
+   uses interface List<uint16_t> as neighborList; // list for neighbors
+   uses interface Timer<Tmilli> as neighborTimer; // timer for neighbor
+  
 
 }
 
