@@ -25,7 +25,7 @@ module Node{
 
 // Neighbor discovery
    uses interface List<uint16_t> as neighborList; // list for neighbors
-   uses interface Timer<Tmilli> as neighborTimer; // timer for neighbor
+   uses interface Timer<TMilli> as neighborTimer; // timer for neighbor
   
 
 }
@@ -33,6 +33,13 @@ module Node{
 implementation{
    pack sendPackage;
 
+   event void neighborTimer.fired() {
+      signal CommandHandler.printNeighbors();
+   }
+
+   
+
+ 
 
    // Prototypes
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
