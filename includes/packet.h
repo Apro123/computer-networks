@@ -6,7 +6,7 @@
 #define PACKET_H
 
 
-# include "protocol.h"
+#include "protocol.h"
 #include "channels.h"
 
 enum{
