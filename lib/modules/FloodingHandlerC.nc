@@ -19,14 +19,11 @@ implementation {
   components ActiveMessageC;
   FloodingHandlerP.Packet -> ActiveMessageC;
 
-  components new TimerMilliC() as Timer0;
-  FloodingHandlerP.sendPacketAgain -> Timer0;
-
   components new SimpleSendC(AM_PACK);
   FloodingHandlerP.Sender -> SimpleSendC;
   //MAYBE make multiple instances of Simple Send because it is a generic component
 
-  components new HashmapC(uint16_t, 32) as packetRecords; //32 is the HASH_MAX_SIZE
+  components new HashmapC(pack, 32) as packetRecords; //32 is the HASH_MAX_SIZE
   FloodingHandlerP.packetRecords -> packetRecords;
 
 }
