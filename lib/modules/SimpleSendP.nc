@@ -20,7 +20,7 @@ generic module SimpleSendP(){
    uses interface Timer<TMilli> as sendTimer;
 
    uses interface Packet;
-   uses interface AMPacket;
+   /* uses interface AMPacket; */
    uses interface AMSend;
 
    uses interface Random;

@@ -35,4 +35,10 @@ implementation {
 
     components CommandHandlerC;
     Node.CommandHandler -> CommandHandlerC;
+
+    components FloodingHandlerC;
+    Node.FloodingHandler -> FloodingHandlerC;
+
+    components new TimerMilliC() as Timer0;
+    Node.sendPacketAgain -> Timer0;
 }
