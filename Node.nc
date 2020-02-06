@@ -26,11 +26,15 @@ module Node{
    uses interface FloodingHandler;
 
    uses interface Timer<TMilli> as sendPacketAgain;
+// Neighbor discovery
+   // uses interface Timer<TMilli> as neighborTimer; // timer for neighbor discovery
+   // uses interface List<uint16_t> as neighborList; // lists for all the possible nodes
 }
 
 implementation{
    pack sendPackage;
    uint16_t sequence = 0; //sequence automatically resets to 0
+
 
    // Prototypes
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
@@ -110,7 +114,6 @@ implementation{
       dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
       return msg;
    }
-
 
    event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
       dbg(GENERAL_CHANNEL, "PING EVENT \n");
