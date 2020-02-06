@@ -1,4 +1,4 @@
-//Author: UCM ANDES Lab
+m//Author: UCM ANDES Lab
 //$Author: abeltran2 $
 //$LastChangedDate: 2014-06-16 13:16:24 -0700 (Mon, 16 Jun 2014) $
 
@@ -15,7 +15,6 @@ enum{
 	PROTOCOL_DV = 5,
    PROTOCOL_CMD = 99
 };
-
 
 
 #endif /* PROTOCOL_H */

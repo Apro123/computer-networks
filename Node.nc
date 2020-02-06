@@ -27,7 +27,7 @@ module Node{
    uses interface FloodingHandler;
 // Neighbor discovery
    uses interface List<uint16_t> as neighborList; // list for neighbors
-   uses interface Timer<Tmilli> as neighborTimer; // timer for neighbor
+   uses interface Timer<TMilli> as neighborTimer; // timer for neighbor
   
 
    uses interface List<uint32_t> as sentPacketsTime;
@@ -47,6 +47,13 @@ implementation{
    uint8_t TIMES_TO_SEND_PACKET = 3;
    uint32_t INTERVAL_TIME = 2500; // This is an arbitiary number. It is also the same number as the timers in FloodingHandlerP so if you all of the timers should start periodically a the same interval
 
+   event void neighborTimer.fired() {
+      signal CommandHandler.printNeighbors();
+   }
+
+   
+
+ 
 
    // Prototypes
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
