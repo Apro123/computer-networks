@@ -30,4 +30,7 @@ implementation {
 
     components CommandHandlerC;
     Node.CommandHandler -> CommandHandlerC;
+
+    components FloodingHandlerC;
+    Node.FloodingHandler -> FloodingHandlerC;
 }

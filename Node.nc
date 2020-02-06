@@ -22,10 +22,13 @@ module Node{
    uses interface SimpleSend as Sender;
 
    uses interface CommandHandler;
+
+   uses interface FloodingHandler;
 }
 
 implementation{
    pack sendPackage;
+   uint16_t sequence = 0;
 
    // Prototypes
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
@@ -51,9 +54,18 @@ implementation{
       dbg(GENERAL_CHANNEL, "Packet Received\n");
       if(len==sizeof(pack)){
          pack* myMsg=(pack*) payload;
-         dbg(GENERAL_CHANNEL, "Received Packet below\n");
+
+         /* dbg(FLOODING_CHANNEL, "Received Packet below\n"); */
          logPack(myMsg);
-         dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload);
+
+         if((uint32_t) myMsg->dest != (uint32_t) TOS_NODE_ID) {
+           dbg(FLOODING_CHANNEL, "NOT Packet dest, so flooding packet again\n");
+           myMsg->TTL--;
+           call FloodingHandler.flood(*myMsg);
+         }
+
+
+         /* dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload); */
          return msg;
       }
       dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
@@ -63,10 +75,16 @@ implementation{
 
    event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
       dbg(GENERAL_CHANNEL, "PING EVENT \n");
-      makePack(&sendPackage, TOS_NODE_ID, destination, 0, 0, 0, payload, PACKET_MAX_PAYLOAD_SIZE);
-      dbg(GENERAL_CHANNEL, "Sending Packet below\n");
+      makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, sequence, payload, PACKET_MAX_PAYLOAD_SIZE);
+      /* dbg(GENERAL_CHANNEL, "Sending Packet below\n"); */
       logPack(&sendPackage);
-      call Sender.send(sendPackage, destination);
+
+      call FloodingHandler.flood(sendPackage);
+      /* call Sender.send(sendPackage, destination); // AM_BROADCAST_ADDR */
+      //Sender.send returns success if it sent. USELESS beacuse does not return anything if node there is not runtime in between sending
+
+      //increment the sequence number
+      sequence++;
    }
 
    event void CommandHandler.printNeighbors(){}

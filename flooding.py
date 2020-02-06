@@ -26,7 +26,7 @@ def main():
     s.ping(1, 2, "Hello, World"); #max 20 characters
     s.runTime(1);
 
-    s.ping(1, 10, "coronavirus");
+    s.ping(1, 4, "coronavirus");
     s.runTime(1);
 
 if __name__ == '__main__':
