@@ -14,8 +14,6 @@ module FloodingHandlerP {
 }
 implementation {
 
-    /* error_t return success or fail
-    if(SUCCESS == function())*/
     /* Function returns SUCCESS if packet is not found in hashmap.  if it does exists then dont send it (returns FAIL). If it doesnt exist then send it and save and record the packet (SUCCESS)*/
     error_t checkPacketRecord(uint32_t dest, pack msg) {
       if(call packetRecords.contains(dest)) {
@@ -49,22 +47,16 @@ implementation {
     }
 
     command void FloodingHandler.flood(pack msg) {
-
-      /* call packetRecords.insert((uint32_t) dest, (uint16_t) msg.seq); */
-      /* call packetRecords.insert(TOS_NODE_ID, dest); */
-
       //check to see if packet exists already in hash map through the sequence number.
-      if(SUCCESS == checkPacketRecord((uint32_t) msg.dest, msg)) {
+      error_t check;
+      check = checkPacketRecord((uint32_t) msg.dest, msg);
+      if(SUCCESS == check) {
         dbg(FLOODING_CHANNEL, "Flooding packet\n");
         call Sender.send(msg, AM_BROADCAST_ADDR);
       } else {
         dbg(FLOODING_CHANNEL, "NOT Flooding same packet again\n");
       }
 
-      dbg(FLOODING_CHANNEL, "node id: %d\n", TOS_NODE_ID);
-
       printHashTable();
-
-      /* return FAIL; //FAIL or SUCCESS */
     }
 }
