@@ -74,7 +74,7 @@ implementation{
 
 	// Peek tail
 	command t List.back(){
-		return container[size];
+		return container[size-1]; //size
 	}
 
 	command bool List.isEmpty(){
@@ -91,4 +91,13 @@ implementation{
 	command t List.get(uint16_t position){
 		return container[position];
 	}
+
+	/* command bool List.contains(t input) {
+		for(i = 0; i<size; i++){
+			if(container[i] == input) {
+				return true;
+			}
+		}
+		return false;
+	} */
 }

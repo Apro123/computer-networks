@@ -23,7 +23,9 @@ implementation {
   FloodingHandlerP.Sender -> SimpleSendC;
   //MAYBE make multiple instances of Simple Send because it is a generic component
 
-  components new HashmapC(pack, 32) as packetRecords; //32 is the HASH_MAX_SIZE
-  FloodingHandlerP.packetRecords -> packetRecords;
+  /* components new HashmapC(pack, 32) as packetRecords; //32 is the HASH_MAX_SIZE
+  FloodingHandlerP.packetRecords -> packetRecords; */
 
+  components new ListC(pack, 32) as previousPackets;
+  FloodingHandlerP.previousPackets -> previousPackets;
 }

@@ -24,7 +24,7 @@ def main():
     # After sending a ping, simulate a little to prevent collision.
     s.runTime(1);
     s.ping(1, 10, "Hello, World"); #max 20 characters
-    s.runTime(4);
+    s.runTime(3);
 
     # s.ping(1, 4, "coronavirus");
     # s.runTime(1);

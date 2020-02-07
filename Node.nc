@@ -37,6 +37,10 @@ implementation{
 
    event void sendPacketAgain.fired() {
      dbg(FLOODING_CHANNEL, "sendPacketAgain fired\n");
+     dbg(FLOODING_CHANNEL, "%d\n", call sendPacketAgain.getNow());
+     dbg(FLOODING_CHANNEL, "%d\n", call sendPacketAgain.gett0());
+     dbg(FLOODING_CHANNEL, "%d\n", call sendPacketAgain.getdt());
+
      //firing again because packet must have been lost
      call FloodingHandler.flood(sendPackage); //GETTING DROPPED because of packet already exists within the hash map. possible solution is to increase sequence number. other possible solution is to use a timer in flooding handler to delete previous packets after a certain time.
    }
@@ -99,6 +103,9 @@ implementation{
            } else if (myMsg->protocol == 1) {
              dbg(GENERAL_CHANNEL, "Ping Reply received for packet and stopping timer\n");
              dbg(GENERAL_CHANNEL, "-----------------\n");
+             dbg(FLOODING_CHANNEL, "%d\n", call sendPacketAgain.getNow());
+             dbg(FLOODING_CHANNEL, "%d\n", call sendPacketAgain.gett0());
+             dbg(FLOODING_CHANNEL, "%d\n", call sendPacketAgain.getdt());
              call sendPacketAgain.stop();
            }
          }
@@ -116,7 +123,7 @@ implementation{
       dbg(GENERAL_CHANNEL, "PING EVENT \n");
       makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, sequence, payload, PACKET_MAX_PAYLOAD_SIZE);
       logPack(&sendPackage);
-      call sendPacketAgain.startPeriodic( 1500 );
+      call sendPacketAgain.startPeriodic( 1000 ); //1500
       call FloodingHandler.flood(sendPackage);
       /* call Sender.send(sendPackage, destination); // AM_BROADCAST_ADDR */
       //Sender.send returns success if it sent. USELESS beacuse does not return anything if node there is not runtime in between sending
