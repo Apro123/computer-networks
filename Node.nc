@@ -31,18 +31,25 @@ module Node{
 implementation{
    pack sendPackage;
    uint16_t sequence = 0; //sequence automatically resets to 0
+   uint8_t timesToSendPacket = 3;
 
    // Prototypes
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
    event void sendPacketAgain.fired() {
-     dbg(FLOODING_CHANNEL, "sendPacketAgain fired\n");
-     dbg(FLOODING_CHANNEL, "%d\n", call sendPacketAgain.getNow());
-     dbg(FLOODING_CHANNEL, "%d\n", call sendPacketAgain.gett0());
-     dbg(FLOODING_CHANNEL, "%d\n", call sendPacketAgain.getdt());
+     timesToSendPacket--;
+     //dont keep sending the same packet over and over again
+     if(timesToSendPacket == 0) {
+       dbg(FLOODING_CHANNEL, "Reached max times packet has been sent! Stopping Timer now!\n");
+       call sendPacketAgain.stop();
+       return;
+     } else {
+       dbg(FLOODING_CHANNEL, "sendPacketAgain fired\n");
 
-     //firing again because packet must have been lost
-     call FloodingHandler.flood(sendPackage); //GETTING DROPPED because of packet already exists within the hash map. possible solution is to increase sequence number. other possible solution is to use a timer in flooding handler to delete previous packets after a certain time.
+       //firing again because packet must have been lost
+       call FloodingHandler.flood(sendPackage);
+     }
+
    }
 
    event void Boot.booted(){
@@ -92,9 +99,10 @@ implementation{
              pack temp;
              //time to send ping reply
              dbg(GENERAL_CHANNEL, "PING REPLY EVENT \n");
-             sequence++;
-             /* memcpy(tempPayload, myMsg->payload, PACKET_MAX_PAYLOAD_SIZE); */
-             /* dbg(GENERAL_CHANNEL, "gerrgwewgr \n"); */
+             dbg(GENERAL_CHANNEL, "-----------------\n");
+
+             /* sequence++; //increment the sequence number */
+
              makePack(&temp, myMsg->dest, myMsg->src, MAX_TTL, 1, sequence, (uint8_t*)myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
              dbg(GENERAL_CHANNEL, "Sending Ping Reply Packet below\n");
              logPack(&temp);
@@ -103,9 +111,6 @@ implementation{
            } else if (myMsg->protocol == 1) {
              dbg(GENERAL_CHANNEL, "Ping Reply received for packet and stopping timer\n");
              dbg(GENERAL_CHANNEL, "-----------------\n");
-             dbg(FLOODING_CHANNEL, "%d\n", call sendPacketAgain.getNow());
-             dbg(FLOODING_CHANNEL, "%d\n", call sendPacketAgain.gett0());
-             dbg(FLOODING_CHANNEL, "%d\n", call sendPacketAgain.getdt());
              call sendPacketAgain.stop();
            }
          }
@@ -123,9 +128,8 @@ implementation{
       dbg(GENERAL_CHANNEL, "PING EVENT \n");
       makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, sequence, payload, PACKET_MAX_PAYLOAD_SIZE);
       logPack(&sendPackage);
-      call sendPacketAgain.startPeriodic( 1000 ); //1500
+      call sendPacketAgain.startPeriodic( 1500 ); //1500
       call FloodingHandler.flood(sendPackage);
-      /* call Sender.send(sendPackage, destination); // AM_BROADCAST_ADDR */
       //Sender.send returns success if it sent. USELESS beacuse does not return anything if node there is not runtime in between sending
 
       //increment the sequence number
