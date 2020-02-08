@@ -28,7 +28,6 @@ module Node{
 // Neighbor discovery
    uses interface List<uint16_t> as neighborList; // list for neighbors
    uses interface Timer<TMilli> as neighborTimer; // timer for neighbor
-  
 
    uses interface List<uint32_t> as sentPacketsTime;
    uses interface List<pack> as sentPackets;
@@ -48,8 +47,10 @@ implementation{
    uint32_t INTERVAL_TIME = 2500; // This is an arbitiary number. It is also the same number as the timers in FloodingHandlerP so if you all of the timers should start periodically a the same interval
 
    event void neighborTimer.fired() {
+      dbg(NEIGHBOR_CHANNEL, "discovering neighbor\n"); //testing to print
+      call Sender.send(sendPackage, AM_BROADCAST_ADDR);
       signal CommandHandler.printNeighbors();
-      dbg(NEIGHBOR_CHANNEL, "discovering neighbor\n");
+
    }
 
    // Prototypes
@@ -143,7 +144,6 @@ implementation{
 
    event void Boot.booted(){
       call AMControl.start();
-
       dbg(GENERAL_CHANNEL, "Booted\n");
    }
 
@@ -160,6 +160,7 @@ implementation{
 
    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
       dbg(GENERAL_CHANNEL, "Packet Received\n");
+      // dbg(NEIGHBOR_CHANNEL, "Discovering Neighbor: %d\n", TOS_NODE_ID); // TOS_NODE_ID = 18
       if(len==sizeof(pack)){
          pack* myMsg=(pack*) payload;
 
