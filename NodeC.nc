@@ -18,10 +18,10 @@ implementation {
     components Node;
     components new AMReceiverC(AM_PACK) as GeneralReceive;
 
-    components new TimerMilliC() as neighborTimer0;
-    components new ListC(uint16_t, 10) as neighborLists;
+    components new TimerMilliC() as neighborTimer;
+    components new ListC(uint16_t, 19) as neighborLists;
 
-    Node.neighborTimer -> neighborTimer0;
+    Node.neighborTimer -> neighborTimer;
     Node.neighborList -> neighborLists;
     Node -> MainC.Boot;
 
