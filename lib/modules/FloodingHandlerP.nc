@@ -14,12 +14,14 @@ module FloodingHandlerP {
   // hashmap key = dest, hashmap value = seq
 
   uses interface List<pack> as previousPackets;
+  uses interface List<uint32_t> as packetArrivalTimes;
+
   uses interface Timer<TMilli> as dropPacket;
 
-  //TODO: two timers to drop packet
-  //first one is set to 1000 whenever it is saved in the FIFO list.
-  //if second packet comes then it goes to first timer while the remaining time of the first one goes to the second timer.
-  //if another packet comes before first and second is finished. it talks to the second timer and asks whether the timer is more than 50%? done then it drops that packet
+  //timer is set to a set interval
+  //every interval all packets whos "life expectancy" is at least 75% is dropped.
+  //this avoids packets from being stored in memory too long
+  //for certain rare topopologies this may fail as this node may transmit the same package but that is okay because TTL will decrement and the packet will eventually die.
 }
 implementation {
 
@@ -28,14 +30,38 @@ implementation {
     }
 
     event void dropPacket.fired(){
-      pack temp;
       bool isEmpty;
       isEmpty = call previousPackets.isEmpty();
-      if(!isEmpty) {
-        dbg(FLOODING_CHANNEL, "dropping packet below (timer fired)\n");
-        temp = call previousPackets.popfront();
 
-        printPacketFlooding(&temp);
+      if(!isEmpty) {
+        pack temp;
+        uint32_t packetTempNow;
+        uint32_t baseTime;
+        uint32_t intervalTime;
+        uint8_t numPackets;
+        dbg(FLOODING_CHANNEL, "dropping packet(s) below (timer fired)\n");
+        //droppping packets whos life expectancy is more than 75%
+
+        numPackets = call packetArrivalTimes.size(); //max list size or packet record size
+
+        while(numPackets > 0) {
+          packetTempNow = call packetArrivalTimes.front();
+          baseTime = call dropPacket.gett0();
+          intervalTime = call dropPacket.getdt();
+          if(((packetTempNow - baseTime)*100)/intervalTime > 75) {
+            temp = call previousPackets.popfront();
+            call packetArrivalTimes.popfront();
+            printPacketFlooding(&temp);
+          }
+          else {
+            break;
+          }
+          numPackets--;
+        }
+
+        /* temp = call previousPackets.popfront(); */
+
+
         /* dbg(FLOODING_CHANNEL, "%d\n", call dropPacket.getNow());
         dbg(FLOODING_CHANNEL, "%d\n", call dropPacket.gett0());
         dbg(FLOODING_CHANNEL, "%d\n", call dropPacket.getdt()); */
@@ -48,6 +74,8 @@ implementation {
     /* Function returns SUCCESS if packet is not found in hashmap.  if it does exists then dont send it (returns FAIL). If it doesnt exist then send it and save and record the packet (SUCCESS)*/
     error_t checkPacketRecord(pack msg) {
       uint16_t i;
+      bool isRunning;
+      uint32_t timeNow;
 
       //search for packet
       for(i = 0; i < (call previousPackets.size()); i++) {
@@ -63,13 +91,21 @@ implementation {
         storedDest = (uint16_t) temp.dest;
 
         if(storedSeq == msg.seq && storedProtocol == msg.protocol && storedSrc == msg.src && storedDest == msg.dest) {
-          printPacketFlooding(&temp);
+          /* printPacketFlooding(&temp); */
           return FAIL;
         }
       }
 
-      call dropPacket.startPeriodic( 1500 );
+      isRunning = call dropPacket.isRunning();
+      //only start timer if the timer is stopped aka the packet records list is empty
+      if(!isRunning) {
+        call dropPacket.startPeriodic( 1500 );
+      }
+      //get time now
+      timeNow = call dropPacket.getNow();
+
       call previousPackets.pushback(msg);
+      call packetArrivalTimes.pushback(timeNow);
       return SUCCESS;
     }
 
@@ -78,7 +114,7 @@ implementation {
       uint16_t i;
 
       dbg(FLOODING_CHANNEL, "Current Packets Saved: *****\n");
-      
+
       for(i = 0; i < (call previousPackets.size()); i++) {
         pack temp;
         temp = call previousPackets.get(i);

@@ -21,6 +21,9 @@ implementation {
   components new ListC(pack, 32) as previousPackets;
   FloodingHandlerP.previousPackets -> previousPackets;
 
+  components new ListC(uint32_t, 32) as packetArrivalTimes;
+  FloodingHandlerP.packetArrivalTimes -> packetArrivalTimes;
+
   components new TimerMilliC() as Timer1;
   FloodingHandlerP.dropPacket -> Timer1;
 }
