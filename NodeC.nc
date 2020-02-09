@@ -19,7 +19,7 @@ implementation {
     components new AMReceiverC(AM_PACK) as GeneralReceive;
 
     components new TimerMilliC() as neighborTimer;
-    components new ListC(uint16_t, 19) as neighborLists;
+    components new ListC(uint16_t, 19) as neighborLists; //19 because there are 19 nodes
 
     Node.neighborTimer -> neighborTimer;
     Node.neighborList -> neighborLists;
