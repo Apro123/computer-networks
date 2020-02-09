@@ -115,8 +115,6 @@ implementation{
            }
          }
 
-
-         /* dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload); */
          return msg;
       }
       dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
@@ -128,7 +126,7 @@ implementation{
       dbg(GENERAL_CHANNEL, "PING EVENT \n");
       makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, sequence, payload, PACKET_MAX_PAYLOAD_SIZE);
       logPack(&sendPackage);
-      call sendPacketAgain.startPeriodic( 1500 ); //1500
+      call sendPacketAgain.startPeriodic( 1500 );
       call FloodingHandler.flood(sendPackage);
       //Sender.send returns success if it sent. USELESS beacuse does not return anything if node there is not runtime in between sending
 

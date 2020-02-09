@@ -5,13 +5,8 @@
 
 module FloodingHandlerP {
   provides interface FloodingHandler;
-  /* uses interface Receive; */
   uses interface Packet;
   uses interface SimpleSend as Sender;
-
-  /* uses interface Hashmap<pack> as packetRecords; */
-  // each node has its own instance of hashmap
-  // hashmap key = dest, hashmap value = seq
 
   uses interface List<pack> as previousPackets;
   uses interface List<uint32_t> as packetArrivalTimes;
@@ -58,13 +53,6 @@ implementation {
           }
           numPackets--;
         }
-
-        /* temp = call previousPackets.popfront(); */
-
-
-        /* dbg(FLOODING_CHANNEL, "%d\n", call dropPacket.getNow());
-        dbg(FLOODING_CHANNEL, "%d\n", call dropPacket.gett0());
-        dbg(FLOODING_CHANNEL, "%d\n", call dropPacket.getdt()); */
       } else {
         dbg(FLOODING_CHANNEL, "Stopping dropPacket timer because list is empty\n");
         call dropPacket.stop();
