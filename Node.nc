@@ -47,10 +47,8 @@ implementation{
    uint32_t INTERVAL_TIME = 2500; // This is an arbitiary number. It is also the same number as the timers in FloodingHandlerP so if you all of the timers should start periodically a the same interval
 
    event void neighborTimer.fired() {
-      dbg(NEIGHBOR_CHANNEL, "discovering neighbor\n"); //testing to print
-      call Sender.send(sendPackage, AM_BROADCAST_ADDR);
+      dbg(NEIGHBOR_CHANNEL, "Discovering Node %d\n", TOS_NODE_ID);
       signal CommandHandler.printNeighbors();
-
    }
 
    // Prototypes
@@ -150,6 +148,7 @@ implementation{
    event void AMControl.startDone(error_t err){
       if(err == SUCCESS){
          dbg(GENERAL_CHANNEL, "Radio On\n");
+         call neighborTimer.startPeriodic(2500);
       }else{
          //Retry until successful
          call AMControl.start();
@@ -160,6 +159,7 @@ implementation{
 
    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
       dbg(GENERAL_CHANNEL, "Packet Received\n");
+
       // dbg(NEIGHBOR_CHANNEL, "Discovering Neighbor: %d\n", TOS_NODE_ID); // TOS_NODE_ID = 18
       if(len==sizeof(pack)){
          pack* myMsg=(pack*) payload;
@@ -251,7 +251,9 @@ implementation{
       sequence++;
    }
 
-   event void CommandHandler.printNeighbors(){}
+   event void CommandHandler.printNeighbors(){
+      dbg(NEIGHBOR_CHANNEL, "THIS IS A TEST\n");
+   }
 
    event void CommandHandler.printRouteTable(){}
 
