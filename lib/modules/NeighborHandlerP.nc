@@ -14,5 +14,5 @@ module NeighborHandlerP {
 }
 
 implementation {
-    
+
 }

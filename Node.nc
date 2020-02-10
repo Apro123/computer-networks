@@ -36,25 +36,24 @@ module Node{
 implementation{
    pack sendPackage;
    uint16_t sequence = 0; //sequence automatically resets to 0
-   // uint16_t packetSent = 0;
-   // uint16_t packetRecieve = 0;
 
-
-   // event void neighborTimer.fired() {
-   //    dbg(NEIGHBOR_CHANNEL, "discovering neighbor\n"); //testing to print
-   //    call Sender.send(sendPackage, AM_BROADCAST_ADDR);
-   //    // call neighborTimer.startPeriodic(2500);
-   //    signal CommandHandler.printNeighbors();
-     
-   // }
-
-   event void neighborTimer.fired() {
-      dbg(NEIGHBOR_CHANNEL, "Discovering Node %d\n", TOS_NODE_ID);
-      signal CommandHandler.printNeighbors();
-   }
 
    // Prototypes
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
+
+   task void Task() {
+      pack temp;
+      makePack(&temp, TOS_NODE_ID, TOS_NODE_ID, 1, 0, 0, "", PACKET_MAX_PAYLOAD_SIZE); //making a pack with TTL of 1
+      call neighborTimer.startPeriodic(2500);
+      call Sender.send(sendPackage, AM_BROADCAST_ADDR); //Sending a packet to all nodes
+      dbg(NEIGHBOR_CHANNEL, "This current node is %d\n", TOS_NODE_ID);
+   }
+
+   event void neighborTimer.fired() {
+      dbg(NEIGHBOR_CHANNEL, "NeighborTimer fired\n");
+      post Task(); //calling task from previous method
+      
+   }
 
    event void sendPacketAgain.fired() {
      dbg(FLOODING_CHANNEL, "sendPacketAgain fired\n");
@@ -80,16 +79,43 @@ implementation{
    event void AMControl.stopDone(error_t err){}
 
    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
-      dbg(GENERAL_CHANNEL, "Packet Received\n");
+      uint16_t i;
+      uint16_t j;
+      // dbg(GENERAL_CHANNEL, "Packet Received\n");
+      dbg(NEIGHBOR_CHANNEL, "NODE %d RECEIVED PACKET\n", TOS_NODE_ID); //seeing which node is recieving packet
+      
+      call neighborList.pushback(TOS_NODE_ID);
+      dbg(NEIGHBOR_CHANNEL, "NODE %d is being pushed back in list\n", TOS_NODE_ID);
+
+      for (i = 0; i < call neighborList.size(); i++) {
+         if (call neighborList.get(i) == TOS_NODE_ID) {
+            // dbg(NEIGHBOR_CHANNEL, "REPEATED NODE %d\n", TOS_NODE_ID);
+            continue;
+         }
+      }
+
+      // PUSH BACK NODES INTO LIST AND THEN SEE FOR ANY REPEATS
+
+      // dbg(NEIGHBOR_CHANNEL, "Size of NeighborList is %d\n", call neighborList.size());
+
+      // for(j = 0; j < call neighborList.size(); j++) {
         
-      // dbg(NEIGHBOR_CHANNEL, "Discovering Neighbor: %d\n", TOS_NODE_ID); // TOS_NODE_ID = 18
+      //    dbg(NEIGHBOR_CHANNEL, "NeighborList (%d): Node %d\n", j, TOS_NODE_ID);
+      //    call neighborList.front();
+      // }
+
       if(len==sizeof(pack)){
          pack* myMsg=(pack*) payload;
+         uint8_t tempTTL;
 
          /* dbg(FLOODING_CHANNEL, "Received Packet below\n"); */
-         myMsg->TTL--; //decrement TTL
+         tempTTL = myMsg->TTL;
+         myMsg->TTL = tempTTL - 1; //decrement TTL
          logPack(myMsg);
 
+         if(myMsg->TTL == 0 && myMsg->src == myMsg->dest) {
+            dbg(NEIGHBOR_CHANNEL, "NEIGHBOR DISCOVERED\n");
+         }
 
          if((uint32_t) myMsg->dest != (uint32_t) TOS_NODE_ID) {
            dbg(FLOODING_CHANNEL, "NOT Packet dest, so implementing flooding again\n");
@@ -148,7 +174,14 @@ implementation{
    }
 
    event void CommandHandler.printNeighbors(){
-      dbg(NEIGHBOR_CHANNEL, "THIS IS A TEST\n");
+      // dbg(NEIGHBOR_CHANNEL, "Node %d is the neighbor of \n", TOS_NODE_ID);
+      // for (uint16_t i = 0; i < call neighborList.size(); i++) {
+      //    dbg(NEIGHBOR_CHANNEL, "NODE %d\n", call neighborList.get(i));
+      // }
+
+      // call neighborTimer.startPeriodic(2500);
+
+      dbg(NEIGHBOR_CHANNEL, "This is Node %d\n", TOS_NODE_ID);
    }
 
    event void CommandHandler.printRouteTable(){}
