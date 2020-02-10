@@ -14,11 +14,12 @@ module FloodingHandlerP {
   uses interface Timer<TMilli> as dropPacket;
 
   //timer is set to a set interval
-  //every interval all packets whos "life expectancy" is at least 75% is dropped.
+  //every interval all packets whos "life expectancy" is at least 75% is dropped. 75 is an arbitrary number
   //this avoids packets from being stored in memory too long
   //for certain rare topopologies this may fail as this node may transmit the same package but that is okay because TTL will decrement and the packet will eventually die.
 }
 implementation {
+    uint32_t INTERVAL_TIME = 2500; // same time as when the packet is sent
 
     void printPacketFlooding(pack *input) {
       dbg(FLOODING_CHANNEL, "Src: %hhu Dest: %hhu Seq: %hhu TTL: %hhu Protocol:%hhu  Payload: %s\n", input->src, input->dest, input->seq, input->TTL, input->protocol, input->payload);
@@ -87,7 +88,7 @@ implementation {
       isRunning = call dropPacket.isRunning();
       //only start timer if the timer is stopped aka the packet records list is empty
       if(!isRunning) {
-        call dropPacket.startPeriodic( 1500 );
+        call dropPacket.startPeriodic( INTERVAL_TIME );
       }
       //get time now
       timeNow = call dropPacket.getNow();

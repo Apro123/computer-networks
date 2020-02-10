@@ -92,12 +92,29 @@ implementation{
 		return container[position];
 	}
 
-	/* command bool List.contains(t input) {
-		for(i = 0; i<size; i++){
-			if(container[i] == input) {
-				return true;
+	command void List.set(uint16_t position, t value){
+		container[position] = value;
+	}
+
+	command void List.remove(uint16_t pos) {
+		if(size > 0 && pos < size) {
+			if(pos == 0) {
+				call List.popfront();
+			} else if (pos == size-1) {
+				call List.popback();
+			} else {
+				uint16_t i;
+				for(i=pos; i < size; i++) {
+					container[i] = container[i+1];
+				}
+				/*
+				uint16_t i;
+				temp = container;
+				for(i=0; i<pos; i++) {
+					container[i] = temp[i];
+				} */
+
 			}
 		}
-		return false;
-	} */
+	}
 }

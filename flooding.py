@@ -27,7 +27,7 @@ def main():
     s.runTime(1);
 
     s.ping(1, 4, "coronavirus");
-    s.runTime(3);
+    s.runTime(6);
 
 if __name__ == '__main__':
     main()
