@@ -43,26 +43,57 @@ module Node{
 implementation{
    pack sendPackage;
    uint16_t sequence = 0; //sequence automatically resets to 0
-<<<<<<< 02b3a9350b433b4512f8d287da2612e7806af94f
    uint8_t TIMES_TO_SEND_PACKET = 3;
    uint32_t INTERVAL_TIME = 2500; // This is an arbitiary number. It is also the same number as the timers in FloodingHandlerP so if you all of the timers should start periodically a the same interval
-=======
 
 
    // Prototypes
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
->>>>>>> started added nodes in a list to look for neighbors
 
    task void Task() {
       pack temp;
       makePack(&temp, TOS_NODE_ID, TOS_NODE_ID, 1, 0, 0, "", PACKET_MAX_PAYLOAD_SIZE); //making a pack with TTL of 1
       call neighborTimer.startPeriodic(2500);
       call Sender.send(sendPackage, AM_BROADCAST_ADDR); //Sending a packet to all nodes
-      dbg(NEIGHBOR_CHANNEL, "This current node is %d\n", TOS_NODE_ID);
+      dbg(NEIGHBOR_CHANNEL, "Node %d sending ping\n", TOS_NODE_ID);
+      // dbg(NEIGHBOR_CHANNEL, "This current node is %d\n", TOS_NODE_ID);
+   }
+
+   bool neighborListContent(uint16_t NODE_ID) { //checking for content in the list of neighbors
+       uint16_t i; // new variables has to always be declared at top
+      if (call neighborList.isEmpty()) {
+         return 0;
+      }
+
+      for (i = 0; i < call neighborList.size(); i++) {
+         if (call neighborList.get(i) == NODE_ID) {
+         dbg(NEIGHBOR_CHANNEL, "NODE %d neighbor list repeated content is NODE %d\n", TOS_NODE_ID, NODE_ID);
+         return 1;
+         }
+      }
+      return 0;
+   }
+
+   void addNeighbor(uint16_t NODE_ID) { // adding the neighbors to each of the nodes
+      dbg(NEIGHBOR_CHANNEL, "NODE %d's neighbors are: NODE %d\n", TOS_NODE_ID, NODE_ID);
+      call neighborList.pushback(NODE_ID);
+   }
+
+
+   void nodePosition(uint16_t NODE_ID) { // extracting the position of the node
+      uint16_t i;
+      if (call neighborList.isEmpty() == 1) {
+         for(i = 0; i < call neighborList.size(); i++) {
+            if (NODE_ID == call neighborList.get(i)) {
+               dbg(NEIGHBOR_CHANNEL, "Position of Node %d is %d\n", NODE_ID, i);
+            }
+         }
+      }
+      dbg(NEIGHBOR_CHANNEL, "DID NOT FIND POSITION OF NODE\n");
    }
 
    event void neighborTimer.fired() {
-      dbg(NEIGHBOR_CHANNEL, "NeighborTimer fired\n");
+      // dbg(NEIGHBOR_CHANNEL, "Node %d sending ping\n");
       post Task(); //calling task from previous method
 
    }
@@ -171,6 +202,7 @@ implementation{
    event void AMControl.stopDone(error_t err){}
 
    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
+<<<<<<< 3b26df909715ff0703717bcc7d6bd5b3ee028e6c
       dbg(GENERAL_CHANNEL, "Packet Received\n");
 
       uint16_t i;
@@ -187,6 +219,19 @@ implementation{
             continue;
          }
       }
+=======
+      // uint16_t i;
+      // uint16_t j;
+      dbg(GENERAL_CHANNEL, "Packet Received\n");
+      // dbg(NEIGHBOR_CHANNEL, "NODE %d RECEIVED PACKET\n", TOS_NODE_ID); //seeing which node is recieving packet
+
+      // call neighborList.pushback(TOS_NODE_ID);
+      if(call neighborList.isEmpty()) {
+         dbg(NEIGHBOR_CHANNEL, "NODE %d is being pushed back in list\n", TOS_NODE_ID);
+         call neighborList.pushback(TOS_NODE_ID);
+      }
+
+>>>>>>> added functions for adding neighbors and checking to see if the list is empty
       if(len==sizeof(pack)){
          pack* myMsg=(pack*) payload;
          uint8_t tempTTL;
@@ -195,9 +240,11 @@ implementation{
          tempTTL = myMsg->TTL;
          myMsg->TTL = tempTTL - 1; //decrement TTL
          logPack(myMsg);
+         // dbg(NEIGHBOR_CHANNEL, "this is TTL %d\n", myMsg->TTL);
 
-         if(myMsg->TTL == 0 && myMsg->src == myMsg->dest) {
+         if(myMsg->TTL != 0 && myMsg->src == myMsg->dest) {
             dbg(NEIGHBOR_CHANNEL, "NEIGHBOR DISCOVERED\n");
+            dbg(NEIGHBOR_CHANNEL, "src: %d  dest: %d\n", myMsg->src, myMsg->dest);
          }
 
          if((uint32_t) myMsg->dest != (uint32_t) TOS_NODE_ID) {
@@ -289,6 +336,7 @@ implementation{
       // }
 
       // call neighborTimer.startPeriodic(2500);
+      // call neighborList.printNeighbors();
 
       dbg(NEIGHBOR_CHANNEL, "This is Node %d\n", TOS_NODE_ID);
    }
