@@ -5,7 +5,7 @@
  * @author UCM ANDES Lab
  * @author Alex Beltran
  * @date   2013/09/03
- * 
+ *
  */
 
 interface List<t>{
@@ -23,4 +23,6 @@ interface List<t>{
 	command bool isEmpty();
 	command uint16_t size();
 	command t get(uint16_t position);
+  command void set(uint16_t position, t value);
+  command void remove(uint16_t pos);
 }

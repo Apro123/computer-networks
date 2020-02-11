@@ -36,4 +36,13 @@ implementation {
 
     components new TimerMilliC() as Timer0;
     Node.sendPacketAgain -> Timer0;
+
+    components new ListC(pack, 32) as sentPackets;
+    Node.sentPackets -> sentPackets;
+
+    components new ListC(uint32_t, 32) as sentPacketsTime;
+    Node.sentPacketsTime -> sentPacketsTime;
+
+    components new ListC(uint8_t, 32) as sentPacketsTimesToSendAgain;
+    Node.sentPacketsTimesToSendAgain -> sentPacketsTimesToSendAgain;
 }

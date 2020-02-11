@@ -25,24 +25,111 @@ module Node{
 
    uses interface FloodingHandler;
 
+   uses interface List<uint32_t> as sentPacketsTime;
+   uses interface List<pack> as sentPackets;
+   uses interface List<uint8_t> as sentPacketsTimesToSendAgain;
+   //things need to save: time sent, packet, num times to send packet again
    uses interface Timer<TMilli> as sendPacketAgain;
-// Neighbor discovery
-   // uses interface Timer<TMilli> as neighborTimer; // timer for neighbor discovery
-   // uses interface List<uint16_t> as neighborList; // lists for all the possible nodes
+   //timer is set to a set interval
+   //every interval all packets whos "life expectancy" is at least 100% is dropped. 100 is an arbitrary number
+   //this avoids packets from being stored in memory too long. Also this number is higher than dropping packets by the FLoodingHandlerP, because it is better to send packets again after waiting some extra time instead of sending the same packet again prematurally.
+   //for certain rare cases this may cause the network needing to run longer since a ping event may occur right after another one, amking the second one wait longer for the first time around only. For the second time around, as the first one is "completed" (as in ping reply recieved or the times to send the packet has reached zero), then the timer adapts to the second one.
 }
 
 implementation{
    pack sendPackage;
    uint16_t sequence = 0; //sequence automatically resets to 0
+   uint8_t TIMES_TO_SEND_PACKET = 3;
+   uint32_t INTERVAL_TIME = 2500; // This is an arbitiary number. It is also the same number as the timers in FloodingHandlerP so if you all of the timers should start periodically a the same interval
 
 
    // Prototypes
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
+   void removeSentPacket(uint16_t pos) {
+     call sentPacketsTimesToSendAgain.remove(pos); ///remove for secific index
+     call sentPackets.remove(pos);
+     call sentPacketsTime.remove(pos);
+   }
+
+   void resetTimer() {
+     uint32_t nextPackett0;
+     uint16_t size;
+     size = call sentPackets.size();
+     if(size > 0) {
+       nextPackett0 = call sentPacketsTime.front();
+       call sendPacketAgain.startPeriodicAt(nextPackett0, INTERVAL_TIME);
+     } else {
+       call sendPacketAgain.stop();
+     }
+   }
+
    event void sendPacketAgain.fired() {
-     dbg(FLOODING_CHANNEL, "sendPacketAgain fired\n");
-     //firing again because packet must have been lost
-     call FloodingHandler.flood(sendPackage); //GETTING DROPPED because of packet already exists within the hash map. possible solution is to increase sequence number. other possible solution is to use a timer in flooding handler to delete previous packets after a certain time.
+     uint8_t i;
+     uint8_t ind;
+     uint16_t size;
+     uint8_t storedSentPacketTimesToSendAgain;
+     pack temp;
+     pack packetsToBeSent[32];
+     ind = 0; //index to be used for the packetsToBeSent list
+
+     dbg(GENERAL_CHANNEL, "sendPacketAgain fired.\n");
+
+     //first on in the list always needs to send again
+     storedSentPacketTimesToSendAgain = call sentPacketsTimesToSendAgain.front();
+     storedSentPacketTimesToSendAgain--;
+     call sentPacketsTimesToSendAgain.set(0,storedSentPacketTimesToSendAgain);
+
+     temp = call sentPackets.front();
+     if(storedSentPacketTimesToSendAgain <= 0) {
+       dbg(GENERAL_CHANNEL, "Reached max times to send packet below\n");
+       logPack(&temp);
+       //remove entry from all lists
+       removeSentPacket(0);
+       resetTimer();
+     } else {
+       dbg(GENERAL_CHANNEL, "Flooding Below Packets\n");
+       packetsToBeSent[ind] = temp;
+       ind++;
+     }
+
+
+
+     //checking for any other packets to be sent
+     size = call sentPackets.size();
+     i = 1;
+
+     while(i < size && size > 0) {
+       //need to add interval to t0 for each one
+       uint32_t t0;
+       uint32_t now;
+       uint8_t timesToSendPacket;
+       t0 = call sentPacketsTime.get(i);
+       now = call sendPacketAgain.getNow();
+       if(now - t0 >= INTERVAL_TIME) {
+         //longer than or equal to INTERVAL_TIME means send it again as the packet has been waiting to be sent for its set time
+         temp = call sentPackets.get(i);
+         timesToSendPacket = call sentPacketsTimesToSendAgain.get(i);
+         if(timesToSendPacket <= 0) {
+           removeSentPacket(i);
+         } else {
+           timesToSendPacket--;
+           call sentPacketsTimesToSendAgain.set(i,timesToSendPacket); //decrement the temp packet times to send again
+           call sentPacketsTime.set(i,now);  //set the t0 to the new time
+           packetsToBeSent[ind] = temp;
+           ind++;
+         }
+      }
+      i++;
+     }
+
+
+
+
+     for(i=0; i < ind; i++) {
+       logPack(&packetsToBeSent[i]);
+       call FloodingHandler.flood(packetsToBeSent[i]);
+     }
    }
 
    event void Boot.booted(){
@@ -92,23 +179,36 @@ implementation{
              pack temp;
              //time to send ping reply
              dbg(GENERAL_CHANNEL, "PING REPLY EVENT \n");
-             sequence++;
-             /* memcpy(tempPayload, myMsg->payload, PACKET_MAX_PAYLOAD_SIZE); */
-             /* dbg(GENERAL_CHANNEL, "gerrgwewgr \n"); */
+             dbg(GENERAL_CHANNEL, "-----------------\n");
+
+             /* sequence++; //increment the sequence number */
+
              makePack(&temp, myMsg->dest, myMsg->src, MAX_TTL, 1, sequence, (uint8_t*)myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
              dbg(GENERAL_CHANNEL, "Sending Ping Reply Packet below\n");
              logPack(&temp);
              call FloodingHandler.flood(temp);
 
            } else if (myMsg->protocol == 1) {
-             dbg(GENERAL_CHANNEL, "Ping Reply received for packet and stopping timer\n");
+             uint8_t i;
+             uint16_t size;
+             dbg(GENERAL_CHANNEL, "Ping Reply received for packet and resetting timer\n");
              dbg(GENERAL_CHANNEL, "-----------------\n");
-             call sendPacketAgain.stop();
+             //REMOVE PACKET THAT WAS RECEIVED and reset timer to whatever
+             size = call sentPackets.size();
+             i = 0;
+             while(i < size) {
+               pack comparePack;
+               comparePack = call sentPackets.get(i);
+               if(comparePack.src == myMsg->dest && comparePack.dest == myMsg->src) {
+                 removeSentPacket(i);
+                 resetTimer();
+                 break;
+               }
+               i++;
+             }
            }
          }
 
-
-         /* dbg(GENERAL_CHANNEL, "Package Payload: %s\n", myMsg->payload); */
          return msg;
       }
       dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
@@ -116,12 +216,25 @@ implementation{
    }
 
    event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
+      bool isRunning;
+      uint32_t timeNow;
       dbg(GENERAL_CHANNEL, "PING EVENT \n");
       makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, sequence, payload, PACKET_MAX_PAYLOAD_SIZE);
       logPack(&sendPackage);
-      call sendPacketAgain.startPeriodic( 1500 );
+
+      isRunning = call sendPacketAgain.isRunning();
+      //only start timer if the timer is stopped aka no packets are being currently being sent again
+      if(!isRunning) {
+        call sendPacketAgain.startPeriodic( INTERVAL_TIME );
+      }
+
+      //add packet into the sentPackets lists
+      call sentPackets.pushback(sendPackage);
+      timeNow = call sendPacketAgain.getNow();
+      call sentPacketsTime.pushback(timeNow);
+      call sentPacketsTimesToSendAgain.pushback(TIMES_TO_SEND_PACKET);
+
       call FloodingHandler.flood(sendPackage);
-      /* call Sender.send(sendPackage, destination); // AM_BROADCAST_ADDR */
       //Sender.send returns success if it sent. USELESS beacuse does not return anything if node there is not runtime in between sending
 
       //increment the sequence number
