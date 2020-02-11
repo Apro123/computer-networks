@@ -50,6 +50,11 @@ implementation{
    // Prototypes
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
+   void logPackNeighbor(pack *input){
+   	dbg(NEIGHBOR_CHANNEL, "Src: %hhu Dest: %hhu Seq: %hhu TTL: %hhu Protocol:%hhu  Payload: %s\n",
+   	input->src, input->dest, input->seq, input->TTL, input->protocol, input->payload);
+   }
+
    task void findNeighbors() {
       pack temp;
       uint32_t now;
@@ -170,7 +175,7 @@ implementation{
    event void AMControl.stopDone(error_t err){}
 
    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
-      dbg(GENERAL_CHANNEL, "Packet Received\n");
+
 
       if(len==sizeof(pack)){
          pack* myMsg=(pack*) payload;
@@ -178,13 +183,14 @@ implementation{
          uint8_t tempTTL;
          tempTTL = myMsg->TTL;
          myMsg->TTL = tempTTL - 1; //decrement TTL
-         logPack(myMsg);
 
          //Neighbor Discovery
          if(myMsg->TTL == 0 && myMsg->src == myMsg->dest) {
             uint8_t i;
             uint16_t size;
             bool exists;
+            logPackNeighbor(myMsg);
+            dbg(NEIGHBOR_CHANNEL, "Packet Received\n");
             dbg(NEIGHBOR_CHANNEL, "NEIGHBOR DISCOVERED\n");
 
             size = call neighborList.size();
@@ -205,9 +211,9 @@ implementation{
               makePack(&neighborPingReply, TOS_NODE_ID, TOS_NODE_ID, 1, 1, 0, (uint8_t*)"", PACKET_MAX_PAYLOAD_SIZE);
               call Sender.send(neighborPingReply, AM_BROADCAST_ADDR);
             }
-         }
-
-         if((uint32_t) myMsg->dest != (uint32_t) TOS_NODE_ID) {
+         } else if((uint32_t) myMsg->dest != (uint32_t) TOS_NODE_ID) {
+           dbg(GENERAL_CHANNEL, "Packet Received\n");
+           logPack(myMsg);
            dbg(FLOODING_CHANNEL, "NOT Packet dest, so implementing flooding again\n");
 
            if(myMsg->TTL != 0) {
