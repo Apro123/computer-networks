@@ -12,6 +12,7 @@
 #include "includes/CommandMsg.h"
 #include "includes/sendInfo.h"
 #include "includes/channels.h"
+#include "includes/protocol.h"
 
 module Node{
    uses interface Boot;
@@ -183,7 +184,7 @@ implementation{
 
              /* sequence++; //increment the sequence number */
 
-             makePack(&temp, myMsg->dest, myMsg->src, MAX_TTL, 1, sequence, (uint8_t*)myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
+             makePack(&temp, myMsg->dest, myMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, sequence, (uint8_t*)myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
              dbg(GENERAL_CHANNEL, "Sending Ping Reply Packet below\n");
              logPack(&temp);
              call FloodingHandler.flood(temp);
@@ -219,7 +220,7 @@ implementation{
       bool isRunning;
       uint32_t timeNow;
       dbg(GENERAL_CHANNEL, "PING EVENT \n");
-      makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, sequence, payload, PACKET_MAX_PAYLOAD_SIZE);
+      makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, PROTOCOL_PING, sequence, payload, PACKET_MAX_PAYLOAD_SIZE);
       logPack(&sendPackage);
 
       isRunning = call sendPacketAgain.isRunning();
