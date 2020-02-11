@@ -45,7 +45,7 @@ implementation{
    uint16_t sequence = 0; //sequence automatically resets to 0
    uint8_t TIMES_TO_SEND_PACKET = 3;
    uint32_t INTERVAL_TIME = 2500; // This is an arbitiary number. It is also the same number as the timers in FloodingHandlerP so if you all of the timers should start periodically a the same interval
-
+   
 
    // Prototypes
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
@@ -176,13 +176,11 @@ implementation{
 
       if(len==sizeof(pack)){
          pack* myMsg=(pack*) payload;
-         uint8_t tempTTL;
 
-         /* dbg(FLOODING_CHANNEL, "Received Packet below\n"); */
+         uint8_t tempTTL;
          tempTTL = myMsg->TTL;
          myMsg->TTL = tempTTL - 1; //decrement TTL
          logPack(myMsg);
-         // dbg(NEIGHBOR_CHANNEL, "this is TTL %d\n", myMsg->TTL);
 
          //Neighbor Discovery
          if(myMsg->TTL == 0 && myMsg->src == myMsg->dest) {
@@ -302,7 +300,6 @@ implementation{
       for (i = 0; i < size; i++) {
         dbg(NEIGHBOR_CHANNEL, "NODE %d\n", call neighborList.get(i));
       }
-
    }
 
    event void CommandHandler.printRouteTable(){}
