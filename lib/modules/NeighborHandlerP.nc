@@ -10,9 +10,10 @@ module NeighborHandlerP {
     uses interface SimpleSend as Sender;
     uses interface List<uint16_t> as neighborList;
     uses interface Timer<TMilli> as neighborTimer;
-
 }
 
 implementation {
+    uint32_t time = 2500;
 
+    
 }

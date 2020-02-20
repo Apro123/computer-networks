@@ -11,5 +11,10 @@ configuration NeighborHandlerC {
 
 implementation {
     components NeighborHandlerP;
-    
+    NeighborHandler = NeighborHandlerP;
+    components ActiveMessageC;
+    NeighborHandlerP.Packet->ActiveMessageC;
+
+    components new SimpleSendC(AM_PACK);
+    NeighborHandlerP.Sender->SimpleSendC;
 }
