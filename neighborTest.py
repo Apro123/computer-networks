@@ -33,7 +33,7 @@ def main():
     s.runTime(1);
     s.neighborDMP(1);
     s.runTime(1);
-    s.neighborDMP(6);
+    s.neighborDMP(15);
     s.runTime(2)
 
 if __name__ == '__main__':
