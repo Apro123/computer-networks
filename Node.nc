@@ -25,6 +25,8 @@ module Node{
    uses interface CommandHandler;
 
    uses interface FloodingHandler;
+
+  // uses interface NeighborHandler;
 // Neighbor discovery
    uses interface List<uint16_t> as neighborList; // list for neighbors
    uses interface Timer<TMilli> as neighborTimer; // timer for neighbor
@@ -77,7 +79,7 @@ implementation{
    }
 
    void removeSentPacket(uint16_t pos) {
-     call sentPacketsTimesToSendAgain.remove(pos); ///remove for secific index
+     call sentPacketsTimesToSendAgain.remove(pos); ///remove for specific index
      call sentPackets.remove(pos);
      call sentPacketsTime.remove(pos);
    }

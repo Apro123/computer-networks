@@ -50,4 +50,7 @@ implementation {
 
     components new ListC(uint8_t, 32) as sentPacketsTimesToSendAgain;
     Node.sentPacketsTimesToSendAgain -> sentPacketsTimesToSendAgain;
+
+//     components neighborHandlerC;
+//     Node.neighborHandler->neighborHandlerC;
 }
