@@ -18,11 +18,11 @@ implementation {
     components Node;
     components new AMReceiverC(AM_PACK) as GeneralReceive;
 
-    components new TimerMilliC() as neighborTimer;
-    components new ListC(uint16_t, 19) as neighborList; //19 because there are 19 nodes
+    // components new TimerMilliC() as neighborTimer;
+    // components new ListC(uint16_t, 19) as neighborList; //19 because there are 19 nodes
 
-    Node.neighborTimer -> neighborTimer;
-    Node.neighborList -> neighborList;
+    // Node.neighborTimer -> neighborTimer;
+    // Node.neighborList -> neighborList;
     Node -> MainC.Boot;
 
     Node.Receive -> GeneralReceive;
@@ -51,6 +51,6 @@ implementation {
     components new ListC(uint8_t, 32) as sentPacketsTimesToSendAgain;
     Node.sentPacketsTimesToSendAgain -> sentPacketsTimesToSendAgain;
 
-//     components neighborHandlerC;
-//     Node.neighborHandler->neighborHandlerC;
+    components NeighborHandlerC;
+    Node.NeighborHandler->NeighborHandlerC;
 }

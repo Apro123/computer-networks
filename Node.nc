@@ -26,10 +26,11 @@ module Node{
 
    uses interface FloodingHandler;
 
-  // uses interface NeighborHandler;
+  uses interface NeighborHandler;
+
 // Neighbor discovery
-   uses interface List<uint16_t> as neighborList; // list for neighbors
-   uses interface Timer<TMilli> as neighborTimer; // timer for neighbor
+  //  uses interface List<uint16_t> as neighborList; // list for neighbors
+  //  uses interface Timer<TMilli> as neighborTimer; // timer for neighbor
 
    uses interface List<uint32_t> as sentPacketsTime;
    uses interface List<pack> as sentPackets;
@@ -57,26 +58,26 @@ implementation{
    	input->src, input->dest, input->seq, input->TTL, input->protocol, input->payload);
    }
 
-   task void findNeighbors() {
-      pack temp;
-      uint32_t now;
-      bool isRunning;
-      makePack(&temp, TOS_NODE_ID, TOS_NODE_ID, 1, 0, 0, (uint8_t*)"", PACKET_MAX_PAYLOAD_SIZE); //making a pack with TTL of 1
+  //  task void findNeighbors() {
+  //     pack temp;
+  //     uint32_t now;
+  //     bool isRunning;
+  //     makePack(&temp, TOS_NODE_ID, TOS_NODE_ID, 1, 0, 0, (uint8_t*)"", PACKET_MAX_PAYLOAD_SIZE); //making a pack with TTL of 1
 
-      isRunning = call neighborTimer.isRunning();
-      if(!isRunning) {
-        now = call neighborTimer.getNow();
-        call neighborTimer.startPeriodicAt(now-100, INTERVAL_TIME*3);
-      }
+  //     isRunning = call neighborTimer.isRunning();
+  //     if(!isRunning) {
+  //       now = call neighborTimer.getNow();
+  //       call neighborTimer.startPeriodicAt(now-100, INTERVAL_TIME*3);
+  //     }
 
-      call Sender.send(temp, AM_BROADCAST_ADDR); //Sending a packet to all nodes
-      dbg(NEIGHBOR_CHANNEL, "Node %d sending ping\n", TOS_NODE_ID);
+  //     call Sender.send(temp, AM_BROADCAST_ADDR); //Sending a packet to all nodes
+  //     dbg(NEIGHBOR_CHANNEL, "Node %d sending ping\n", TOS_NODE_ID);
 
-   }
+  //  }
 
-   event void neighborTimer.fired() {
-      post findNeighbors(); //calling task from previous method
-   }
+  //  event void neighborTimer.fired() {
+  //     post findNeighbors(); //calling task from previous method
+  //  }
 
    void removeSentPacket(uint16_t pos) {
      call sentPacketsTimesToSendAgain.remove(pos); ///remove for specific index
@@ -167,7 +168,8 @@ implementation{
    event void AMControl.startDone(error_t err){
       if(err == SUCCESS){
          dbg(GENERAL_CHANNEL, "Radio On\n");
-         call neighborTimer.startOneShot(10);
+        //  call neighborTimer.startOneShot(10); 
+        call NeighborHandler.runTimer();
       }else{
          //Retry until successful
          call AMControl.start();
@@ -188,31 +190,34 @@ implementation{
 
          //Neighbor Discovery
          if(myMsg->TTL == 0 && myMsg->src == myMsg->dest) {
-            uint8_t i;
-            uint16_t size;
-            bool exists;
-            logPackNeighbor(myMsg);
-            dbg(NEIGHBOR_CHANNEL, "Packet Received\n");
-            dbg(NEIGHBOR_CHANNEL, "NEIGHBOR DISCOVERED\n");
+            // uint8_t i;
+            // uint16_t size;
+            // bool exists;
+            // logPackNeighbor(myMsg);
+            // dbg(NEIGHBOR_CHANNEL, "Packet Received\n");
+            // dbg(NEIGHBOR_CHANNEL, "NEIGHBOR DISCOVERED\n");
 
-            size = call neighborList.size();
-            exists = FALSE;
-            for(i = 0; i<size; i++ ) {
-              uint16_t storedNodeID;
-              storedNodeID = call neighborList.get(i);
-              if(storedNodeID == myMsg->src) {
-                exists = TRUE;
-              }
-            }
-            if(!exists) {
-              call neighborList.pushback(myMsg->src);
-            }
+            // size = call neighborList.size();
+            // exists = FALSE;
+            // for(i = 0; i<size; i++ ) {
+            //   uint16_t storedNodeID;
+            //   storedNodeID = call neighborList.get(i);
+            //   if(storedNodeID == myMsg->src) {
+            //     exists = TRUE;
+            //   }
+            // }
+            // if(!exists) {
+            //   call neighborList.pushback(myMsg->src);
+            // }
 
-            if(myMsg->protocol == 0) {
-              pack neighborPingReply;
-              makePack(&neighborPingReply, TOS_NODE_ID, TOS_NODE_ID, 1, 1, 0, (uint8_t*)"", PACKET_MAX_PAYLOAD_SIZE);
-              call Sender.send(neighborPingReply, AM_BROADCAST_ADDR);
-            }
+            // if(myMsg->protocol == 0) {
+            //   pack neighborPingReply;
+            //   makePack(&neighborPingReply, TOS_NODE_ID, TOS_NODE_ID, 1, 1, 0, (uint8_t*)"", PACKET_MAX_PAYLOAD_SIZE);
+            //   call Sender.send(neighborPingReply, AM_BROADCAST_ADDR);
+            // }
+
+            call NeighborHandler.neighborHandlerReceive(myMsg);
+
          } else if((uint32_t) myMsg->dest != (uint32_t) TOS_NODE_ID) {
            dbg(GENERAL_CHANNEL, "Packet Received\n");
            logPack(myMsg);
@@ -298,14 +303,16 @@ implementation{
    }
 
    event void CommandHandler.printNeighbors(){
-      uint8_t i;
-      uint16_t size;
-      dbg(NEIGHBOR_CHANNEL, "Neighbors of Node %d below\n", TOS_NODE_ID);
 
-      size = call neighborList.size();
-      for (i = 0; i < size; i++) {
-        dbg(NEIGHBOR_CHANNEL, "NODE %d\n", call neighborList.get(i));
-      }
+     call NeighborHandler.printNeighbors();
+      // uint8_t i;
+      // uint16_t size;
+      // dbg(NEIGHBOR_CHANNEL, "Neighbors of Node %d below\n", TOS_NODE_ID);
+
+      // size = call neighborList.size();
+      // for (i = 0; i < size; i++) {
+      //   dbg(NEIGHBOR_CHANNEL, "NODE %d\n", call neighborList.get(i));
+      // }
    }
 
    event void CommandHandler.printRouteTable(){}
