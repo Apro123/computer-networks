@@ -21,6 +21,6 @@ implementation {
     components new TimerMilliC() as Timer1;
     NeighborHandlerP.neighborTimer -> Timer1;
 
-    components new ListC(uint16_t, 19) as neighborList;
-    NeighborHandlerP.neighborList->neighborList;
+    components new HashmapC(uint16_t, 19) as neighborCost;
+    NeighborHandlerP.neighborCost->neighborCost;
 }

@@ -26,21 +26,14 @@ module Node{
 
    uses interface FloodingHandler;
 
-  uses interface NeighborHandler;
-
-// Neighbor discovery
-  //  uses interface List<uint16_t> as neighborList; // list for neighbors
-  //  uses interface Timer<TMilli> as neighborTimer; // timer for neighbor
+   uses interface NeighborHandler;
 
    uses interface List<uint32_t> as sentPacketsTime;
    uses interface List<pack> as sentPackets;
    uses interface List<uint8_t> as sentPacketsTimesToSendAgain;
    //things need to save: time sent, packet, num times to send packet again
    uses interface Timer<TMilli> as sendPacketAgain;
-   //timer is set to a set interval
-   //every interval all packets whos "life expectancy" is at least 100% is dropped. 100 is an arbitrary number
-   //this avoids packets from being stored in memory too long. Also this number is higher than dropping packets by the FLoodingHandlerP, because it is better to send packets again after waiting some extra time instead of sending the same packet again prematurally.
-   //for certain rare cases this may cause the network needing to run longer since a ping event may occur right after another one, amking the second one wait longer for the first time around only. For the second time around, as the first one is "completed" (as in ping reply recieved or the times to send the packet has reached zero), then the timer adapts to the second one.
+
 }
 
 implementation{
@@ -53,31 +46,6 @@ implementation{
    // Prototypes
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
-   void logPackNeighbor(pack *input){
-   	dbg(NEIGHBOR_CHANNEL, "Src: %hhu Dest: %hhu Seq: %hhu TTL: %hhu Protocol:%hhu  Payload: %s\n",
-   	input->src, input->dest, input->seq, input->TTL, input->protocol, input->payload);
-   }
-
-  //  task void findNeighbors() {
-  //     pack temp;
-  //     uint32_t now;
-  //     bool isRunning;
-  //     makePack(&temp, TOS_NODE_ID, TOS_NODE_ID, 1, 0, 0, (uint8_t*)"", PACKET_MAX_PAYLOAD_SIZE); //making a pack with TTL of 1
-
-  //     isRunning = call neighborTimer.isRunning();
-  //     if(!isRunning) {
-  //       now = call neighborTimer.getNow();
-  //       call neighborTimer.startPeriodicAt(now-100, INTERVAL_TIME*3);
-  //     }
-
-  //     call Sender.send(temp, AM_BROADCAST_ADDR); //Sending a packet to all nodes
-  //     dbg(NEIGHBOR_CHANNEL, "Node %d sending ping\n", TOS_NODE_ID);
-
-  //  }
-
-  //  event void neighborTimer.fired() {
-  //     post findNeighbors(); //calling task from previous method
-  //  }
 
    void removeSentPacket(uint16_t pos) {
      call sentPacketsTimesToSendAgain.remove(pos); ///remove for specific index
@@ -98,6 +66,10 @@ implementation{
    }
 
    event void sendPacketAgain.fired() {
+     //timer is set to a set interval
+     //every interval all packets whos "life expectancy" is at least 100% is dropped. 100 is an arbitrary number
+     //this avoids packets from being stored in memory too long. Also this number is higher than dropping packets by the FLoodingHandlerP, because it is better to send packets again after waiting some extra time instead of sending the same packet again prematurally.
+     //for certain rare cases this may cause the network needing to run longer since a ping event may occur right after another one, amking the second one wait longer for the first time around only. For the second time around, as the first one is "completed" (as in ping reply recieved or the times to send the packet has reached zero), then the timer adapts to the second one.
      uint8_t i;
      uint8_t ind;
      uint16_t size;
@@ -155,7 +127,7 @@ implementation{
      }
 
      for(i=0; i < ind; i++) {
-       logPack(&packetsToBeSent[i]);
+       /* logPack(&packetsToBeSent[i]); */
        call FloodingHandler.flood(packetsToBeSent[i]);
      }
    }
@@ -168,7 +140,6 @@ implementation{
    event void AMControl.startDone(error_t err){
       if(err == SUCCESS){
          dbg(GENERAL_CHANNEL, "Radio On\n");
-        //  call neighborTimer.startOneShot(10); 
         call NeighborHandler.runTimer();
       }else{
          //Retry until successful
@@ -180,7 +151,6 @@ implementation{
 
    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 
-
       if(len==sizeof(pack)){
          pack* myMsg=(pack*) payload;
 
@@ -190,34 +160,7 @@ implementation{
 
          //Neighbor Discovery
          if(myMsg->TTL == 0 && myMsg->src == myMsg->dest) {
-            // uint8_t i;
-            // uint16_t size;
-            // bool exists;
-            // logPackNeighbor(myMsg);
-            // dbg(NEIGHBOR_CHANNEL, "Packet Received\n");
-            // dbg(NEIGHBOR_CHANNEL, "NEIGHBOR DISCOVERED\n");
-
-            // size = call neighborList.size();
-            // exists = FALSE;
-            // for(i = 0; i<size; i++ ) {
-            //   uint16_t storedNodeID;
-            //   storedNodeID = call neighborList.get(i);
-            //   if(storedNodeID == myMsg->src) {
-            //     exists = TRUE;
-            //   }
-            // }
-            // if(!exists) {
-            //   call neighborList.pushback(myMsg->src);
-            // }
-
-            // if(myMsg->protocol == 0) {
-            //   pack neighborPingReply;
-            //   makePack(&neighborPingReply, TOS_NODE_ID, TOS_NODE_ID, 1, 1, 0, (uint8_t*)"", PACKET_MAX_PAYLOAD_SIZE);
-            //   call Sender.send(neighborPingReply, AM_BROADCAST_ADDR);
-            // }
-
             call NeighborHandler.neighborHandlerReceive(myMsg);
-
          } else if((uint32_t) myMsg->dest != (uint32_t) TOS_NODE_ID) {
            dbg(GENERAL_CHANNEL, "Packet Received\n");
            logPack(myMsg);
@@ -253,6 +196,7 @@ implementation{
              uint8_t i;
              uint16_t size;
              dbg(GENERAL_CHANNEL, "Ping Reply received for packet and resetting timer\n");
+             logPack(myMsg);
              dbg(GENERAL_CHANNEL, "-----------------\n");
              //REMOVE PACKET THAT WAS RECEIVED and reset timer to whatever
              size = call sentPackets.size();
@@ -305,14 +249,6 @@ implementation{
    event void CommandHandler.printNeighbors(){
 
      call NeighborHandler.printNeighbors();
-      // uint8_t i;
-      // uint16_t size;
-      // dbg(NEIGHBOR_CHANNEL, "Neighbors of Node %d below\n", TOS_NODE_ID);
-
-      // size = call neighborList.size();
-      // for (i = 0; i < size; i++) {
-      //   dbg(NEIGHBOR_CHANNEL, "NODE %d\n", call neighborList.get(i));
-      // }
    }
 
    event void CommandHandler.printRouteTable(){}
