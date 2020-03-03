@@ -68,6 +68,7 @@ implementation{
         /* uint8_t i; */
         /* uint16_t size; */
         bool exists;
+
         logPackNeighbor(msg);
         dbg(NEIGHBOR_CHANNEL, "Packet Received\n");
         dbg(NEIGHBOR_CHANNEL, "NEIGHBOR DISCOVERED\n");
@@ -76,7 +77,7 @@ implementation{
 
         if(!exists && msg->protocol == 1) {
           call neighborCost.insert(msg->src, 1);
-        } else if(msg->protocol == 1){
+        } else if(msg->protocol == 1 && TOS_NODE_ID == msg->seq){
 
           uint16_t cost = call neighborCost.get(msg->src);
           cost = cost + 1;
@@ -84,7 +85,7 @@ implementation{
         }
         if(msg->protocol == 0) {
           pack neighborPingReply;
-          makePack(&neighborPingReply, TOS_NODE_ID, TOS_NODE_ID, 1, 1, 0, (uint8_t*)"", PACKET_MAX_PAYLOAD_SIZE);
+          makePack(&neighborPingReply, TOS_NODE_ID, TOS_NODE_ID, 1, 1, msg->src, (uint8_t*)"", PACKET_MAX_PAYLOAD_SIZE);
           call Sender.send(neighborPingReply, AM_BROADCAST_ADDR);
         }
     }
