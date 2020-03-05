@@ -143,6 +143,7 @@ implementation{
       if(err == SUCCESS){
          dbg(GENERAL_CHANNEL, "Radio On\n");
          call NeighborHandler.runTimer();
+         call DistanceVector.runTimer();
       }else{
          //Retry until successful
          call AMControl.start();
@@ -218,6 +219,7 @@ implementation{
 
          return msg;
       }
+
       dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
       return msg;
    }
