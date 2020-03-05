@@ -23,4 +23,7 @@ implementation {
 
     components new HashmapC(uint16_t, 19) as neighborCost;
     NeighborHandlerP.neighborCost->neighborCost;
+
+    components new HashmapC(uint16_t, 19) as neighborwithCost;
+    NeighborHandlerP.neighborsWithCost->neighborwithCost;
 }
