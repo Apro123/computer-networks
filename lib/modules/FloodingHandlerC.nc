@@ -15,7 +15,7 @@ implementation {
   components ActiveMessageC;
   FloodingHandlerP.Packet -> ActiveMessageC;
 
-  components new SimpleSendC(AM_PACK);
+  components new SimpleSendC(AM_FLOODING);
   FloodingHandlerP.Sender -> SimpleSendC;
 
   components new ListC(pack, 32) as previousPackets;
