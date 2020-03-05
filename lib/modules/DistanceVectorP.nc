@@ -57,6 +57,11 @@ implementation{
       return;
     }
 
+    command void DistanceVector.receiveHashmap(Hashmap<uint16_t> neighborWCost) {
+
+        return;
+    }
+
     void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t protocol, uint16_t seq, uint8_t* payload, uint16_t length){
       Package->src = src;
       Package->dest = dest;
