@@ -34,6 +34,8 @@ module Node{
    //things need to save: time sent, packet, num times to send packet again
    uses interface Timer<TMilli> as sendPacketAgain;
 
+   uses interface DistanceVector;
+
 }
 
 implementation{
@@ -250,7 +252,9 @@ implementation{
      call NeighborHandler.printNeighbors();
    }
 
-   event void CommandHandler.printRouteTable(){}
+   event void CommandHandler.printRouteTable(){
+     call DistanceVector.printRouteTable();
+   }
 
    event void CommandHandler.printLinkState(){}
 

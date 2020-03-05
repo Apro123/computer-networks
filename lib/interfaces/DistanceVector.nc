@@ -3,5 +3,5 @@
 interface DistanceVector {
     command void runTimer();
     command void handleVectorReceive(pack* msg);
-    
+    command void printRouteTable();
 }

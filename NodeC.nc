@@ -48,4 +48,7 @@ implementation {
 
     components NeighborHandlerC;
     Node.NeighborHandler->NeighborHandlerC;
+
+    components DistanceVectorC;
+    Node.DistanceVector->DistanceVectorC;
 }
