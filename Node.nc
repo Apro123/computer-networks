@@ -34,6 +34,8 @@ module Node{
    //things need to save: time sent, packet, num times to send packet again
    uses interface Timer<TMilli> as sendPacketAgain;
 
+   uses interface DistanceVector;
+
 }
 
 implementation{
@@ -141,6 +143,7 @@ implementation{
       if(err == SUCCESS){
          dbg(GENERAL_CHANNEL, "Radio On\n");
          call NeighborHandler.runTimer();
+         call DistanceVector.runTimer();
       }else{
          //Retry until successful
          call AMControl.start();
@@ -216,6 +219,7 @@ implementation{
 
          return msg;
       }
+
       dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
       return msg;
    }
@@ -250,7 +254,9 @@ implementation{
      call NeighborHandler.printNeighbors();
    }
 
-   event void CommandHandler.printRouteTable(){}
+   event void CommandHandler.printRouteTable(){
+     call DistanceVector.printRouteTable();
+   }
 
    event void CommandHandler.printLinkState(){}
 

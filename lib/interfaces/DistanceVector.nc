@@ -1,7 +1,7 @@
 #include "../../includes/packet.h"
 
 interface DistanceVector {
-    /* command void printNeighbors();
     command void runTimer();
-    command void neighborHandlerReceive(pack* msg); */
+    command void handleVectorReceive(pack* msg);
+    command void printRouteTable();
 }
