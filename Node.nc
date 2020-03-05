@@ -140,7 +140,7 @@ implementation{
    event void AMControl.startDone(error_t err){
       if(err == SUCCESS){
          dbg(GENERAL_CHANNEL, "Radio On\n");
-        call NeighborHandler.runTimer();
+         call NeighborHandler.runTimer();
       }else{
          //Retry until successful
          call AMControl.start();
@@ -247,7 +247,6 @@ implementation{
    }
 
    event void CommandHandler.printNeighbors(){
-
      call NeighborHandler.printNeighbors();
    }
 
