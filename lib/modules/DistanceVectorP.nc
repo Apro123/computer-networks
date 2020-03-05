@@ -12,6 +12,7 @@ module DistanceVectorP {
     uses interface Packet;
     uses interface SimpleSend as Sender;
     uses interface Timer<TMilli> as sendTimer;
+    uses interface Hashmap<uint16_t> as neighborCost;
 }
 
 implementation{
@@ -57,7 +58,21 @@ implementation{
       return;
     }
 
-    command void DistanceVector.receiveHashmap(Hashmap<uint16_t> neighborWCost) {
+    command void receiveHashmap(uint32_t* neighborWCost) {
+        uint32_t i;
+        // uint32_t* keys;
+        uint16_t size;
+        uint32_t nWC[255];
+        uint32_t* keys;
+
+        neighborCost = neighborWCost;
+       
+        size = call neighborCost.size();
+        keys = neighborCost.getKeys();
+
+        // for(i = 0; i < size; i++) {
+            
+        // }
 
         return;
     }

@@ -21,6 +21,9 @@ module NeighborHandlerP {
 implementation{
     uint32_t INTERVAL_TIME = 2500;
     uint16_t TimesSent = 0;
+    uint32_t* keys;
+    uint16_t* cost;
+    uint16_t size;
 
     void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
@@ -96,28 +99,32 @@ implementation{
      uint32_t* FinalKeys;
      uint16_t Finalsize;
 
-     FinalKeys = call neighborWithCost.getKeys();
-     Finalsize = call neighborWithCost.size();
+     FinalKeys = call neighborCost.getKeys();
+     Finalsize = call neighborCost.size();
      for(i = 0; i < Finalsize; i++) {
-       call neighborWithCost.insert(FinalKeys[i], call neighborWithCost.get(FinalKeys[i]) / TimesSent);
+       call neighborWithCost.insert(FinalKeys[i], call neighborCost.get(FinalKeys[i]) / TimesSent);
      }
-    //  return neighborWithCost;
+     call neighborWithCost.insert(TOS_NODE_ID, 0); //did this so we the current neighbor can tell itself it has the cost of 0
    }
 
-  // command Hashmap<uint16_t> NeighborHandler.Hashmap() {
-  //   uint32_t i;
-  //   uint32_t* FinalKeys;
-  //   uint16_t Finalsize;
+   command void NeighborHandler.getKeys() {
+    keys = neighborWithCost.getKeys();
+    return;
+   }
 
-  //   FinalKeys = call neighborWithCost.getKeys();
-  //   Finalsize = call neighborWithCost.size();
-  //   for(i = 0; i < Finalsize; i++) {
-  //     call neighborWithCost.insert(FinalKeys[i], call neighborWithCost.get(FinalKeys[i]) / TimesSent);
-  //   } 
-  //   return neighborWithCost;
-  // }
+   command void NeighborHandler.getCost() {
+     uint32_t i;
+     uint16_t size;
+     size = call neighborWithCost.size();
+     for(i = 0; i < size; i++) {
+       cost[i] = call neighborWithCost.get(keys[i]);
+     }
+     return;
+   }
 
-
+  command void NeighborHandler.getValues() {
+    return neighborWithCost.getValues();
+  }
     void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t protocol, uint16_t seq, uint8_t* payload, uint8_t length){
       Package->src = src;
       Package->dest = dest;
