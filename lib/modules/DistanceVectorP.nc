@@ -26,16 +26,16 @@ implementation{
         uint32_t now;
         bool isRunning;
 
-        makePack(&temp, TOS_NODE_ID, TOS_NODE_ID, 1, 0, sequence, (uint8_t*)&dvrPay, PACKET_MAX_PAYLOAD_SIZE);
+        makePack(&temp, TOS_NODE_ID, TOS_NODE_ID, 1, 0, sequence, (uint8_t*)&dvrPay, sizeof(dvrPayload));
 
         isRunning = call sendTimer.isRunning();
         if(!isRunning) {
             now = call sendTimer.getNow();
             call sendTimer.startPeriodicAt(now-75, INTERVAL_TIME*12);
         }
-        logPack(&temp);
+        /* logPack(&temp); */
         call Sender.send(temp, AM_BROADCAST_ADDR);
-
+        dbg(ROUTING_CHANNEL, "fweef\n");
         sequence = sequence + 1;
     }
 
@@ -44,7 +44,7 @@ implementation{
     }
 
     event void sendTimer.fired() {
-      call sendTimer.startOneShot(20);
+      call sendTimer.startOneShot(INTERVAL_TIME-20);
     }
 
     command void DistanceVector.printRouteTable() {
