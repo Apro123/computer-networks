@@ -26,9 +26,9 @@ typedef nx_struct pack{
 }pack;
 
 typedef nx_struct dvrPayload{
-	nx_uint16_t payload_Dest[255];
-	nx_uint16_t payload_NextHop[255];
-	nx_uint16_t payload_TotalCost[255];
+	nx_uint8_t payload_Dest[255];
+	nx_uint8_t payload_NextHop[255];
+	nx_uint8_t payload_TotalCost[255];
 }dvrPayload;
 
 /*
@@ -41,7 +41,7 @@ void logPack(pack *input){
 	dbg(GENERAL_CHANNEL, "Src: %hhu Dest: %hhu Seq: %hhu TTL: %hhu Protocol:%hhu  Payload: %s\n",
 	input->src, input->dest, input->seq, input->TTL, input->protocol, input->payload);
 }
-// 
+//
 // char* prettyOutput(dvrPayload dP) {
 // 	uint8_t i;
 // 	char* str = malloc(sizeof(dvrPayload));
