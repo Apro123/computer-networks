@@ -91,22 +91,6 @@ implementation{
         }
     }
 
-    // command <uint16_t> NeighborHandler.NeighborsWithCost() {
-    //     uint32_t i;
-    //     uint32_t* Finalkeys;
-    //     uint16_t Finalsize;
-
-    //     // dbg(NEIGHBOR_CHANNEL, "Neighbors of Node %d below\n", TOS_NODE_ID);
-    //     Finalkeys = call neighborWithCost.getKeys();
-    //     Finalsize = call neighborWithCost.size();
-    //     for(i = 0; i < size; i++) {
-    //       // dbg(NEIGHBOR_CHANNEL, "NODE: %d, Cost: %d\n", keys[i], (call neighborCost.get(keys[i]))/TimesSent);
-    //       neighborWithCost.insert(Finalkeys[i], call neighborWithCost.get(Finalkeys[i])/TimesSent);
-    //     }
-
-    //     return neighborWithCost;
-
-    // }
    command void NeighborHandler.NeighborsWithCost() {
      uint32_t i;
      uint32_t* FinalKeys;
@@ -117,8 +101,21 @@ implementation{
      for(i = 0; i < Finalsize; i++) {
        call neighborWithCost.insert(FinalKeys[i], call neighborWithCost.get(FinalKeys[i]) / TimesSent);
      }
-     return neighborWithCost;
+    //  return neighborWithCost;
    }
+
+  // command Hashmap<uint16_t> NeighborHandler.Hashmap() {
+  //   uint32_t i;
+  //   uint32_t* FinalKeys;
+  //   uint16_t Finalsize;
+
+  //   FinalKeys = call neighborWithCost.getKeys();
+  //   Finalsize = call neighborWithCost.size();
+  //   for(i = 0; i < Finalsize; i++) {
+  //     call neighborWithCost.insert(FinalKeys[i], call neighborWithCost.get(FinalKeys[i]) / TimesSent);
+  //   } 
+  //   return neighborWithCost;
+  // }
 
 
     void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t protocol, uint16_t seq, uint8_t* payload, uint8_t length){

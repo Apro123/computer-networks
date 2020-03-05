@@ -5,4 +5,5 @@ interface NeighborHandler {
     command void runTimer();
     command void neighborHandlerReceive(pack* msg);
     command void NeighborsWithCost();
+    // command Hashmap<uint16_t> NeighborsWithCost();
 }
