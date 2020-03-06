@@ -10,6 +10,7 @@ module NeighborHandlerP {
     provides interface NeighborHandler;
 
     uses interface Packet;
+    uses interface Receive;
     uses interface SimpleSend as Sender;
     uses interface Timer<TMilli> as neighborTimer;
     uses interface Hashmap<uint16_t> as neighborCost;
@@ -40,7 +41,7 @@ implementation{
         isRunning = call neighborTimer.isRunning();
         if(!isRunning) {
             now = call neighborTimer.getNow();
-            call neighborTimer.startPeriodicAt(now-100, INTERVAL_TIME*3);
+            call neighborTimer.startPeriodicAt(now-100, INTERVAL_TIME*12);
         }
 
         call Sender.send(temp, AM_BROADCAST_ADDR);
@@ -63,14 +64,48 @@ implementation{
         tempKeys = call neighborCost.getKeys();
         tempSize = call neighborCost.size();
         for(i = 0; i < tempSize; i++) {
-          dbg(NEIGHBOR_CHANNEL, "NODE: %d, Cost: %d\n", tempKeys[i], (call neighborCost.get(tempKeys[i]))/TimesSent);
+          dbg(NEIGHBOR_CHANNEL, "times received: %d\n", call neighborCost.get(tempKeys[i]));
+          dbg(NEIGHBOR_CHANNEL, "times sent: %d\n", TimesSent);
+          dbg(NEIGHBOR_CHANNEL, "NODE: %d, Cost: %d\n", tempKeys[i], (TimesSent/call neighborCost.get(tempKeys[i])));
 
         }
     }
 
-    command void NeighborHandler.neighborHandlerReceive(pack* msg){
-        /* uint8_t i; */
-        /* uint16_t size; */
+    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
+
+       if(len==sizeof(pack)){
+          pack* myMsg =(pack*) payload;
+          bool exists;
+
+          //if the packet is not for this node, then skip
+          if(myMsg->protocol == 0 || myMsg->dest == TOS_NODE_ID) {
+
+            exists = call neighborCost.contains(myMsg->src);
+            if(!exists && myMsg->protocol == 1) {
+              // it doesnt exist add it to the hashmap
+              call neighborCost.insert(myMsg->src, 1);
+            } else if(myMsg->protocol == 1 && myMsg->dest == TOS_NODE_ID) {
+              //if protocol is ping reply and the packet is meant for this node then increase the times received
+              uint16_t timesReceived = call neighborCost.get(myMsg->src);
+              timesReceived += 1;
+              call neighborCost.insert(myMsg->src, timesReceived);
+
+            } else if(myMsg->protocol == 0) {
+              pack reply;
+              makePack(&reply, TOS_NODE_ID, myMsg->src, 1, 1, 0, (uint8_t*)"", PACKET_MAX_PAYLOAD_SIZE);
+              call Sender.send(reply, AM_BROADCAST_ADDR);
+            }
+          }
+
+
+          return msg;
+       }
+
+       dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
+       return msg;
+    }
+
+    /* command void NeighborHandler.neighborHandlerReceive(pack* msg){
         bool exists;
 
         logPackNeighbor(msg);
@@ -92,7 +127,7 @@ implementation{
           makePack(&neighborPingReply, TOS_NODE_ID, TOS_NODE_ID, 1, 1, msg->src, (uint8_t*)"", PACKET_MAX_PAYLOAD_SIZE);
           call Sender.send(neighborPingReply, AM_BROADCAST_ADDR);
         }
-    }
+    } */
 
    command void NeighborHandler.calculateNeighborsWithCost() {
      uint32_t i;
@@ -104,13 +139,13 @@ implementation{
      for(i = 0; i < tempSize; i++) {
        keys[i] = (uint8_t) tempKeys[i];
        /* memcpy(costs[i], call neighborCost.get(keys[i]) / TimesSent, sizeof()) */
-       costs[i] = (uint8_t) call neighborCost.get(keys[i]) / TimesSent;
+       costs[i] = (uint8_t) (call neighborCost.get(keys[i]) / TimesSent);
        /* call neighborWithCost.insert(keys[i], call neighborCost.get(keys[i]) / TimesSent); */
      }
      /* call neighborWithCost.insert(TOS_NODE_ID, 0); //did this so we the current neighbor can tell itself it has the cost of 0 */
      keys[tempSize] = TOS_NODE_ID;
      costs[tempSize] = 0;
-     size = (uint8_t) tempSize;
+     size = (uint8_t) tempSize+1;
      /* keys = call neighborWithCost.getKeys();
      size = call neighborWithCost.size();
      for(i = 0; i < size; i++) {
@@ -118,15 +153,15 @@ implementation{
      } */
    }
 
-   command uint32_t* NeighborHandler.getKeys() {
+   command uint8_t* NeighborHandler.getKeys() {
     return keys;
    }
 
-   command uint16_t* NeighborHandler.getCost() {
+   command uint8_t* NeighborHandler.getCost() {
      return costs;
    }
 
-    command uint16_t NeighborHandler.getSize() {
+    command uint8_t NeighborHandler.getSize() {
       return size;
     }
     void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t protocol, uint16_t seq, uint8_t* payload, uint8_t length){

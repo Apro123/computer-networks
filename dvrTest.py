@@ -28,6 +28,8 @@ def main():
     #
     # s.ping(1, 10, "Hi!");
     s.routeDMP(4);
+    s.runTime(4);
+    s.routeDMP(1);
     s.runTime(1);
 
 

@@ -162,9 +162,10 @@ implementation{
          myMsg->TTL = tempTTL - 1; //decrement TTL
 
          //Neighbor Discovery
-         if(myMsg->TTL == 0 && myMsg->src == myMsg->dest) {
+         /* if(myMsg->TTL == 0 && myMsg->src == myMsg->dest) {
             call NeighborHandler.neighborHandlerReceive(myMsg);
-         } else if((uint32_t) myMsg->dest != (uint32_t) TOS_NODE_ID) {
+         } else  */
+         if((uint32_t) myMsg->dest != (uint32_t) TOS_NODE_ID) {
            dbg(GENERAL_CHANNEL, "Packet Received\n");
            logPack(myMsg);
            dbg(FLOODING_CHANNEL, "NOT Packet dest, so implementing flooding again\n");

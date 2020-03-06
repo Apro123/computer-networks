@@ -5,6 +5,7 @@
 #define __AM_TYPES_H__
 enum{
     AM_FLOODING=10,
-    AM_DVR=4
+    AM_DVR=4,
+    AM_NEIGHBOR=7,
 };
 #endif

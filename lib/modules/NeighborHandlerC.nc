@@ -15,7 +15,10 @@ implementation {
     components ActiveMessageC;
     NeighborHandlerP.Packet->ActiveMessageC;
 
-    components new SimpleSendC(AM_PACK);
+    components new AMReceiverC(AM_NEIGHBOR) as GeneralReceive;
+    NeighborHandlerP.Receive -> GeneralReceive;
+
+    components new SimpleSendC(AM_NEIGHBOR);
     NeighborHandlerP.Sender->SimpleSendC;
 
     components new TimerMilliC() as Timer1;

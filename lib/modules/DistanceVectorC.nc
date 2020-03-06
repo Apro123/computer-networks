@@ -13,8 +13,6 @@ configuration DistanceVectorC {
 implementation {
     components DistanceVectorP;
     DistanceVector = DistanceVectorP;
-    components ActiveMessageC;
-    DistanceVectorP.Packet->ActiveMessageC;
 
     components new AMReceiverC(AM_DVR) as GeneralReceive;
     DistanceVectorP.Receive -> GeneralReceive;
@@ -25,8 +23,8 @@ implementation {
     components new TimerMilliC() as Timer1;
     DistanceVectorP.sendTimer -> Timer1;
 
-    components new HashmapC(uint16_t, 19) as neighborCost;
-    DistanceVectorP.neighborCost->neighborCost;
+    /* components new HashmapC(uint16_t, 19) as neighborCost;
+    DistanceVectorP.routingTable->neighborCost; */
 
     components NeighborHandlerC;
     DistanceVectorP.NeighborHandler->NeighborHandlerC;
