@@ -21,9 +21,9 @@ module NeighborHandlerP {
 implementation{
     uint32_t INTERVAL_TIME = 2500;
     uint16_t TimesSent = 0;
-    uint32_t* keys;
-    uint16_t* cost;
-    uint16_t size;
+    uint8_t keys[255];
+    uint8_t costs[255];
+    uint8_t size;
 
     void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
@@ -56,14 +56,14 @@ implementation{
    }
     command void NeighborHandler.printNeighbors(){
         uint32_t i;
-        uint32_t* keys;
-        uint16_t size;
+        uint32_t* tempKeys;
+        uint16_t tempSize;
 
         dbg(NEIGHBOR_CHANNEL, "Neighbors of Node %d below\n", TOS_NODE_ID);
-        keys = call neighborCost.getKeys();
-        size = call neighborCost.size();
-        for(i = 0; i < size; i++) {
-          dbg(NEIGHBOR_CHANNEL, "NODE: %d, Cost: %d\n", keys[i], (call neighborCost.get(keys[i]))/TimesSent);
+        tempKeys = call neighborCost.getKeys();
+        tempSize = call neighborCost.size();
+        for(i = 0; i < tempSize; i++) {
+          dbg(NEIGHBOR_CHANNEL, "NODE: %d, Cost: %d\n", tempKeys[i], (call neighborCost.get(tempKeys[i]))/TimesSent);
 
         }
     }
@@ -94,37 +94,41 @@ implementation{
         }
     }
 
-   command void NeighborHandler.NeighborsWithCost() {
+   command void NeighborHandler.calculateNeighborsWithCost() {
      uint32_t i;
-     uint32_t* FinalKeys;
-     uint16_t Finalsize;
+     uint32_t* tempKeys;
+     uint16_t tempSize;
 
-     FinalKeys = call neighborCost.getKeys();
-     Finalsize = call neighborCost.size();
-     for(i = 0; i < Finalsize; i++) {
-       call neighborWithCost.insert(FinalKeys[i], call neighborCost.get(FinalKeys[i]) / TimesSent);
+     tempKeys = call neighborCost.getKeys();
+     tempSize = call neighborCost.size();
+     for(i = 0; i < tempSize; i++) {
+       keys[i] = (uint8_t) tempKeys[i];
+       /* memcpy(costs[i], call neighborCost.get(keys[i]) / TimesSent, sizeof()) */
+       costs[i] = (uint8_t) call neighborCost.get(keys[i]) / TimesSent;
+       /* call neighborWithCost.insert(keys[i], call neighborCost.get(keys[i]) / TimesSent); */
      }
-     call neighborWithCost.insert(TOS_NODE_ID, 0); //did this so we the current neighbor can tell itself it has the cost of 0
-   }
-
-   command void NeighborHandler.getKeys() {
-    keys = neighborWithCost.getKeys();
-    return;
-   }
-
-   command void NeighborHandler.getCost() {
-     uint32_t i;
-     uint16_t size;
+     /* call neighborWithCost.insert(TOS_NODE_ID, 0); //did this so we the current neighbor can tell itself it has the cost of 0 */
+     keys[tempSize] = TOS_NODE_ID;
+     costs[tempSize] = 0;
+     size = (uint8_t) tempSize;
+     /* keys = call neighborWithCost.getKeys();
      size = call neighborWithCost.size();
      for(i = 0; i < size; i++) {
-       cost[i] = call neighborWithCost.get(keys[i]);
-     }
-     return;
+       costs[i] = call neighborWithCost.get(keys[i]);
+     } */
    }
 
-  command void NeighborHandler.getValues() {
-    return neighborWithCost.getValues();
-  }
+   command uint32_t* NeighborHandler.getKeys() {
+    return keys;
+   }
+
+   command uint16_t* NeighborHandler.getCost() {
+     return costs;
+   }
+
+    command uint16_t NeighborHandler.getSize() {
+      return size;
+    }
     void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t protocol, uint16_t seq, uint8_t* payload, uint8_t length){
       Package->src = src;
       Package->dest = dest;
@@ -135,5 +139,3 @@ implementation{
    }
 
 }
-
-

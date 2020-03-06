@@ -17,7 +17,7 @@ implementation{
    SimpleSendP.Random -> Random;
 
    SimpleSendP.Packet -> AMSenderC;
-   /* SimpleSendP.AMPacket -> AMSenderC; */
+   SimpleSendP.AMPacket -> AMSenderC;
    SimpleSendP.AMSend -> AMSenderC;
 
    //Lists

@@ -15,6 +15,11 @@ enum{
 	MAX_TTL = 15
 };
 
+typedef nx_struct dvrPayload{
+	nx_uint8_t payload_Dest[255];
+	nx_uint8_t payload_NextHop[255];
+	nx_uint8_t payload_TotalCost[255];
+}dvrPayload;
 
 typedef nx_struct pack{
 	nx_uint16_t dest;
@@ -22,14 +27,8 @@ typedef nx_struct pack{
 	nx_uint16_t seq;		//Sequence Number
 	nx_uint8_t TTL;		//Time to Live
 	nx_uint8_t protocol;
-	nx_uint8_t payload[sizeof(dvrPayload)];
+	nx_uint8_t payload[PACKET_MAX_PAYLOAD_SIZE];
 }pack;
-
-typedef nx_struct dvrPayload{
-	nx_uint8_t payload_Dest[255];
-	nx_uint8_t payload_NextHop[255];
-	nx_uint8_t payload_TotalCost[255];
-}dvrPayload;
 
 /*
  * logPack

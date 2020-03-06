@@ -25,5 +25,5 @@ implementation {
     NeighborHandlerP.neighborCost->neighborCost;
 
     components new HashmapC(uint16_t, 19) as neighborwithCost;
-    NeighborHandlerP.neighborsWithCost->neighborwithCost;
+    NeighborHandlerP.neighborWithCost->neighborwithCost;
 }

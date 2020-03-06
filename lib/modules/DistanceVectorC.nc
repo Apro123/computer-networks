@@ -4,6 +4,7 @@
 #include "../../includes/CommandMsg.h"
 #include "../../includes/sendInfo.h"
 #include "../../includes/channels.h"
+#include "../../includes/am_types.h"
 
 configuration DistanceVectorC {
     provides interface DistanceVector;
@@ -15,15 +16,18 @@ implementation {
     components ActiveMessageC;
     DistanceVectorP.Packet->ActiveMessageC;
 
-    components new SimpleSendC(AM_PACK);
+    components new AMReceiverC(AM_DVR) as GeneralReceive;
+    DistanceVectorP.Receive -> GeneralReceive;
+
+    components new SimpleSendC(AM_DVR);
     DistanceVectorP.Sender->SimpleSendC;
 
     components new TimerMilliC() as Timer1;
     DistanceVectorP.sendTimer -> Timer1;
 
     components new HashmapC(uint16_t, 19) as neighborCost;
-    DistanceVectorP.neighborCost->neighborCost; 
+    DistanceVectorP.neighborCost->neighborCost;
 
     components NeighborHandlerC;
-    Node.NeighborHandler->NeighborHandlerC;
+    DistanceVectorP.NeighborHandler->NeighborHandlerC;
 }
