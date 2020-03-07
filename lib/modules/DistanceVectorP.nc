@@ -80,9 +80,22 @@ implementation{
       pack temp;
       uint8_t i;
       uint8_t set[currentSize];
+      uint8_t j;
+      row routingTableTemp[MAX_SIZE];
+
+
+      // Poison Reverse
+      memcpy(routingTableTemp, routingTable, 255);
+      for(j= 0; j < currentSize; j++) {
+        if(routingTableTemp[j].dest == TOS_NODE_ID) {
+          routingTableTemp[j].cost = 255;
+        }
+      }
+
+
 
       if(currentSize < 5) {
-        memcpy(set, routingTable, sizeof(row)*currentSize);
+        memcpy(set, routingTableTemp, sizeof(row)*currentSize);
         /* for(i = 0; i < currentSize; i++) {
           uint8_t hop = ((row*) set)[i].nextHop;
           uint8_t count = ((row*) set)[i].cost;
@@ -94,12 +107,12 @@ implementation{
         call Sender.send(temp, AM_BROADCAST_ADDR);
       } else {
         for(i = 0; i < currentSize/5; i++) {
-          memcpy(set+(sizeof(row)*i), routingTable, sizeof(row)*5);
+          memcpy(set+(sizeof(row)*i), routingTableTemp, sizeof(row)*5);
           makePack(&temp, TOS_NODE_ID, TOS_NODE_ID, 5, 5, sequence, set, sizeof(row)*5);
           toSend[numPackToSend-1] = temp;
           numPackToSend += 1;
         }
-        memcpy(set+(sizeof(row)*i), routingTable, sizeof(row)*(currentSize%5));
+        memcpy(set+(sizeof(row)*i), routingTableTemp, sizeof(row)*(currentSize%5));
         makePack(&temp, TOS_NODE_ID, TOS_NODE_ID, currentSize%5, 5, sequence, set, sizeof(row)*currentSize%5);
         toSend[numPackToSend-1] = temp;
         numPackToSend += 1;
@@ -148,9 +161,9 @@ implementation{
       } else {
         call Sender.send(toSend[numPackToSend-1], AM_BROADCAST_ADDR);
         numPackToSend -= 1;
-        if(TOS_NODE_ID == 4) {
-          dbg(ROUTING_CHANNEL, "hit\n");
-        }
+        // if(TOS_NODE_ID == 4) {
+        //   dbg(ROUTING_CHANNEL, "hit\n");
+        // }
       }
     }
 
@@ -174,7 +187,7 @@ implementation{
     command void DistanceVector.printRouteTable() {
       uint8_t i;
       dbg(ROUTING_CHANNEL, "Routing Table: \n");
-      dbg(ROUTING_CHANNEL, "Dest\t\tHop\tCount\n");
+      dbg(ROUTING_CHANNEL, "Dest\tHop\tCount\n");
 
       for(i = 0; i < currentSize; i++) {
         uint8_t hop = routingTable[i].nextHop;
