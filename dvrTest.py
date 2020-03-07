@@ -22,7 +22,7 @@ def main():
     s.addChannel(s.ROUTING_CHANNEL);
 
     # After sending a ping, simulate a little to prevent collision.
-    s.runTime(4);
+    s.runTime(10);
     # s.ping(2, 3, "Hello, World");
     # s.runTime(1);
     #

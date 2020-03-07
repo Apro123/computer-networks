@@ -15,8 +15,9 @@ module DistanceVectorP {
     uses interface Receive;
     uses interface SimpleSend as Sender;
     uses interface AMPacket;
-    uses interface Timer<TMilli> as sendTimer;
+    uses interface Timer<TMilli> as tableTimer;
     uses interface Timer<TMilli> as dropRow;
+    uses interface Timer<TMilli> as sendPacks;
     /* uses interface Hashmap<uint16_t> as routingTable; */
     uses interface NeighborHandler as NeighborHandler;
 }
@@ -35,6 +36,8 @@ implementation{
     uint8_t cost[MAX_SIZE];
     row routingTable[MAX_SIZE];
     uint8_t currentSize = 0;
+    pack toSend[255];
+    uint8_t numPackToSend = 0;
 
 
     void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint16_t length);
@@ -73,46 +76,53 @@ implementation{
         return;
     }
 
-    task void sendVector() {
-        pack temp;
-        uint32_t now;
-        bool isRunning;
-        uint8_t i;
-        uint8_t set[currentSize];
+    void sendTable() {
+      pack temp;
+      uint8_t i;
+      uint8_t set[currentSize];
 
-        /* memcpy(dvrPay.payload_NextHop, (uint8_t*) nextHop, 255);
-        memcpy(dvrPay.payload_TotalCost, (uint8_t*) cost, 255); */
-        /* dvrPay->payload_NextHop = (uint8_t*) nextHop;
-        dvrPay->payload_TotalCost = (uint8_t*) cost; */
-
-        if(currentSize < 5) {
-          memcpy(set, routingTable, sizeof(row)*currentSize);
-          /* for(i = 0; i < currentSize; i++) {
-            uint8_t hop = ((row*) set)[i].nextHop;
-            uint8_t count = ((row*) set)[i].cost;
-            if(hop != 0) {
-              dbg(ROUTING_CHANNEL, "%d\t\t%d\t%d\n", ((row*) set)[i].dest, hop, count);
-            }
-          } */
-          makePack(&temp, TOS_NODE_ID, TOS_NODE_ID, currentSize, 5, sequence, set, sizeof(row)*currentSize);
-          call Sender.send(temp, AM_BROADCAST_ADDR);
-        } else {
-          for(i = 0; i < currentSize/5; i++) {
-            memcpy(set, routingTable, sizeof(row)*5);
-            makePack(&temp, TOS_NODE_ID, TOS_NODE_ID, 5, 5, sequence, set, sizeof(row)*5);
-            call Sender.send(temp, AM_BROADCAST_ADDR);
+      if(currentSize < 5) {
+        memcpy(set, routingTable, sizeof(row)*currentSize);
+        /* for(i = 0; i < currentSize; i++) {
+          uint8_t hop = ((row*) set)[i].nextHop;
+          uint8_t count = ((row*) set)[i].cost;
+          if(hop != 0) {
+            dbg(ROUTING_CHANNEL, "%d\t\t%d\t%d\n", ((row*) set)[i].dest, hop, count);
           }
-          memcpy(set, routingTable, sizeof(row)*(currentSize%5));
-          makePack(&temp, TOS_NODE_ID, TOS_NODE_ID, currentSize%5, 5, sequence, set, sizeof(row)*currentSize%5);
-          call Sender.send(temp, AM_BROADCAST_ADDR);
+        } */
+        makePack(&temp, TOS_NODE_ID, TOS_NODE_ID, currentSize, 5, sequence, set, sizeof(row)*currentSize);
+        call Sender.send(temp, AM_BROADCAST_ADDR);
+      } else {
+        for(i = 0; i < currentSize/5; i++) {
+          memcpy(set+(sizeof(row)*i), routingTable, sizeof(row)*5);
+          makePack(&temp, TOS_NODE_ID, TOS_NODE_ID, 5, 5, sequence, set, sizeof(row)*5);
+          toSend[numPackToSend-1] = temp;
+          numPackToSend += 1;
         }
+        memcpy(set+(sizeof(row)*i), routingTable, sizeof(row)*(currentSize%5));
+        makePack(&temp, TOS_NODE_ID, TOS_NODE_ID, currentSize%5, 5, sequence, set, sizeof(row)*currentSize%5);
+        toSend[numPackToSend-1] = temp;
+        numPackToSend += 1;
 
+        /* if(TOS_NODE_ID == 4) {
+          dbg(ROUTING_CHANNEL, "num pack: %d\n", numPackToSend);
+        } */
+        call sendPacks.startPeriodic(500);
+      }
+    }
+
+    task void sendVector() {
+        /* uint32_t now; */
+        bool isRunning;
+
+        sendTable();
         /* makePack(&temp, TOS_NODE_ID, TOS_NODE_ID, 2, 5, sequence, (uint8_t*)"route", PACKET_MAX_PAYLOAD_SIZE); */
 
-        isRunning = call sendTimer.isRunning();
+        isRunning = call tableTimer.isRunning();
         if(!isRunning) {
-            now = call sendTimer.getNow();
-            call sendTimer.startPeriodicAt(now-75, INTERVAL_TIME*24);
+            /* now = call tableTimer.getNow();
+            call tableTimer.startPeriodicAt(now-75, 500); */
+            call tableTimer.startPeriodic(INTERVAL_TIME*24);
         }
 
         // AM_BROADCAST_ADDR = 65535
@@ -122,14 +132,26 @@ implementation{
     }
 
     command void DistanceVector.runTimer() {
-      call sendTimer.startOneShot(INTERVAL_TIME/2);
+      call tableTimer.startOneShot(INTERVAL_TIME/2);
       call dropRow.startPeriodic(INTERVAL_TIME*8);
     }
 
-    event void sendTimer.fired() {
+    event void tableTimer.fired() {
       call NeighborHandler.calculateNeighborsWithCost();
       getNeighborData();
       post sendVector();
+    }
+
+    event void sendPacks.fired() {
+      if(numPackToSend == 0) {
+        call sendPacks.stop();
+      } else {
+        call Sender.send(toSend[numPackToSend-1], AM_BROADCAST_ADDR);
+        numPackToSend -= 1;
+        if(TOS_NODE_ID == 4) {
+          dbg(ROUTING_CHANNEL, "hit\n");
+        }
+      }
     }
 
     event void dropRow.fired() {
@@ -152,7 +174,7 @@ implementation{
     command void DistanceVector.printRouteTable() {
       uint8_t i;
       dbg(ROUTING_CHANNEL, "Routing Table: \n");
-      dbg(ROUTING_CHANNEL, "Dest\tHop\tCount\n");
+      dbg(ROUTING_CHANNEL, "Dest\t\tHop\tCount\n");
 
       for(i = 0; i < currentSize; i++) {
         uint8_t hop = routingTable[i].nextHop;
@@ -215,6 +237,10 @@ implementation{
             dbg(ROUTING_CHANNEL, "cost: %d\n", link);
           } */
           updateTable((row*) myMsg->payload, myMsg->TTL, link, src);
+
+          if(myMsg->seq <= sequence) {
+            sendTable();
+          }
 
           /* logPackDVR(myMsg); */
 
