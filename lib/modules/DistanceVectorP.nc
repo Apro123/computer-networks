@@ -14,8 +14,9 @@ module DistanceVectorP {
 
     uses interface Receive;
     uses interface SimpleSend as Sender;
-
+    uses interface AMPacket;
     uses interface Timer<TMilli> as sendTimer;
+    uses interface Timer<TMilli> as dropRow;
     /* uses interface Hashmap<uint16_t> as routingTable; */
     uses interface NeighborHandler as NeighborHandler;
 }
@@ -122,12 +123,30 @@ implementation{
 
     command void DistanceVector.runTimer() {
       call sendTimer.startOneShot(INTERVAL_TIME/2);
+      call dropRow.startPeriodic(INTERVAL_TIME*8);
     }
 
     event void sendTimer.fired() {
       call NeighborHandler.calculateNeighborsWithCost();
       getNeighborData();
       post sendVector();
+    }
+
+    event void dropRow.fired() {
+      uint8_t i;
+      uint8_t newSize = currentSize;
+      for(i = 0; i < currentSize; i++) {
+        if(i < newSize) {
+          //drop the expired ones by making the cost infinite
+          if(routingTable[i].TTL == 0) {
+            routingTable[i].cost = 255;
+          } else {
+            //decrement TTL
+            routingTable[i].TTL = routingTable[i].TTL - 1;
+          }
+
+        }
+      }
     }
 
     command void DistanceVector.printRouteTable() {
@@ -144,12 +163,38 @@ implementation{
       }
     }
 
-    void updateTable(row* set, uint16_t len) {
+    void updateTable(row* set, uint16_t len, uint8_t linkCost, uint8_t src) {
       uint8_t i;
       for(i = 0; i < len; i++) {
         uint8_t j;
+        bool exists = FALSE;
         row tempRow = set[i];
+        uint8_t newCost = tempRow.cost + linkCost;
+        tempRow.nextHop = src;
         //for each row update the table
+        for(j = 0; j < currentSize; ++j) {
+          if(tempRow.dest == routingTable[j].dest) {
+            exists = TRUE;
+            if(newCost < routingTable[j].cost) {
+              //found a better route
+              routingTable[j] = tempRow;
+              routingTable[j].cost = newCost;
+              break;
+            } else if(tempRow.nextHop == routingTable[j].nextHop) {
+              //update the new cost
+              routingTable[j].cost = newCost;
+              break;
+            }
+            routingTable[j].TTL = DV_TTL;
+          }
+        }
+        if(!exists && j == currentSize) {
+          //new node to add into the table
+          routingTable[j] = tempRow;
+          routingTable[j].TTL = DV_TTL;
+          routingTable[j].cost = newCost;
+          currentSize += 1;
+        }
 
       }
     }
@@ -158,7 +203,18 @@ implementation{
 
        if(len==sizeof(pack)){
           pack* myMsg=(pack*) payload;
-          updateTable((row*) myMsg->payload, myMsg->TTL);
+          uint8_t i;
+          uint8_t link = 255;
+          uint8_t src = call AMPacket.source(msg);
+          for(i = 0; i < currentSize; i++) {
+            if(routingTable[i].dest == src) {
+              link = routingTable[i].cost;
+            }
+          }
+          /* if(TOS_NODE_ID == 5) {
+            dbg(ROUTING_CHANNEL, "cost: %d\n", link);
+          } */
+          updateTable((row*) myMsg->payload, myMsg->TTL, link, src);
 
           /* logPackDVR(myMsg); */
 
