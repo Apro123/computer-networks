@@ -15,6 +15,7 @@ module NeighborHandlerP {
     uses interface Timer<TMilli> as neighborTimer;
     uses interface Hashmap<uint16_t> as neighborCost;
     uses interface Hashmap<uint16_t> as neighborWithCost;
+    uses interface Random as Random;
     //key is the neighbor, value is how many times packet has been recieved from neighbor
     //when printing the neighbors, the cost is calculated
 }
@@ -41,7 +42,7 @@ implementation{
         isRunning = call neighborTimer.isRunning();
         if(!isRunning) {
             now = call neighborTimer.getNow();
-            call neighborTimer.startPeriodicAt(now-100, INTERVAL_TIME*12);
+            call neighborTimer.startPeriodicAt(now-100, INTERVAL_TIME*50 + (uint16_t) (call Random.rand16()%200));
         }
 
         call Sender.send(temp, AM_BROADCAST_ADDR);

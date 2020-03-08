@@ -51,4 +51,7 @@ implementation {
 
     components DistanceVectorC;
     Node.DistanceVector->DistanceVectorC;
+
+    components RandomC as Random;
+    Node.Random -> Random;
 }

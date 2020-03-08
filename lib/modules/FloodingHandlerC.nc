@@ -27,4 +27,7 @@ implementation {
 
   components new TimerMilliC() as Timer1;
   FloodingHandlerP.dropPacket -> Timer1;
+
+  components RandomC as Random;
+  FloodingHandlerP.Random -> Random;
 }

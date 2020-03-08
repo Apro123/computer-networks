@@ -29,4 +29,7 @@ implementation {
 
     components new HashmapC(uint16_t, 19) as neighborwithCost;
     NeighborHandlerP.neighborWithCost->neighborwithCost;
+
+    components RandomC as Random;
+    NeighborHandlerP.Random -> Random;
 }

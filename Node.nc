@@ -35,6 +35,7 @@ module Node{
    uses interface Timer<TMilli> as sendPacketAgain;
 
    uses interface DistanceVector;
+   uses interface Random as Random;
 
 }
 
@@ -61,7 +62,7 @@ implementation{
      size = call sentPackets.size();
      if(size > 0) {
        nextPackett0 = call sentPacketsTime.front();
-       call sendPacketAgain.startPeriodicAt(nextPackett0, INTERVAL_TIME);
+       call sendPacketAgain.startPeriodicAt(nextPackett0, INTERVAL_TIME+ (uint16_t) (call Random.rand16()%200));
      } else {
        call sendPacketAgain.stop();
      }
