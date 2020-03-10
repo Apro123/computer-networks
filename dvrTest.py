@@ -20,9 +20,10 @@ def main():
     s.addChannel(s.COMMAND_CHANNEL);
     s.addChannel(s.GENERAL_CHANNEL);
     s.addChannel(s.ROUTING_CHANNEL);
+    # s.addChannel(s.NEIGHBOR_CHANNEL);
 
     # After sending a ping, simulate a little to prevent collision.
-    s.runTime(200);
+    s.runTime(4);
     # s.ping(2, 3, "Hello, World");
     # s.runTime(1);
     #

@@ -38,6 +38,7 @@ implementation{
     uint8_t* neighborIDs;
     uint8_t neighborSize;
     uint8_t learnedFrom[255];
+    bool SplitHorizon = TRUE;
 
 
     void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint16_t length);
@@ -151,17 +152,32 @@ implementation{
     void sendTable() {
       uint8_t i = 0;
       uint8_t n = 0;
-      for(n = 0; n < neighborSize; n++) {
+      if(SplitHorizon) {
+        for(n = 0; n < neighborSize; n++) {
+          for(i = 0; i < currentSize; i++) {
+            row temp = routingTable[i];
+            if(learnedFrom[routingTable[i].dest] == neighborIDs[n]) { //its own
+              temp.cost = 255; //split horizon with poison reverse
+            }
+            addRowToSend(temp, neighborIDs[n]);
+          }
+          sendBatch(numRowToSend, neighborIDs[n]); //send any remaining
+          numRowToSend = 0;
+        }
+      } else {
         for(i = 0; i < currentSize; i++) {
           row temp = routingTable[i];
-          if(learnedFrom[routingTable[i].dest] == neighborIDs[n]) { //its own
-            temp.cost = 255; //split horizon with poison reverse
-          }
-          addRowToSend(temp, neighborIDs[n]);
+          addRowToSend(temp, AM_BROADCAST_ADDR);
         }
+<<<<<<< HEAD
         sendBatch(numRowToSend, neighborIDs[n]); //send any remaining
 >>>>>>> origin/proj2A
+=======
+        sendBatch(numRowToSend, AM_BROADCAST_ADDR); //send any remaining
+        numRowToSend = 0;
+>>>>>>> origin/proj2A
       }
+
 
 
     }
@@ -170,14 +186,14 @@ implementation{
         sendTable();
 
         if(call tableTimer.isOneShot()) {
-          call tableTimer.startPeriodic(500 + (uint16_t) (call Random.rand16()%200));
+          call tableTimer.startPeriodic(INTERVAL_TIME*6 + (uint16_t) (call Random.rand16()%200));
         }
 
         sequence = sequence + 1;
     }
 
     command void DistanceVector.runTimer() {
-      call tableTimer.startOneShot(INTERVAL_TIME/4 - + (uint16_t) (call Random.rand16()%200));
+      call tableTimer.startOneShot(INTERVAL_TIME - + (uint16_t) (call Random.rand16()%200));
       call dropRow.startPeriodic(INTERVAL_TIME*32 + (uint16_t) (call Random.rand16()%200));
     }
 
