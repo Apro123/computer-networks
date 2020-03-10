@@ -173,7 +173,17 @@ implementation{
 
            if(myMsg->TTL != 0) {
              //dont die
-             call FloodingHandler.flood(*myMsg);
+             uint16_t nextHop;
+             nextHop = call DistanceVector.getNextHop(*myMsg);
+             dbg(ROUTING_CHANNEL, "pack recieved, implementing dvr\n");
+             if(nextHop == 256) {
+               dbg(ROUTING_CHANNEL, "infinite cost or node not in table \n");
+               call FloodingHandler.flood(*myMsg);
+             } else {
+               dbg(ROUTING_CHANNEL, "Sending to Node: %d\n", nextHop);
+               call Sender.send(*myMsg, nextHop);
+             }
+             /* call FloodingHandler.flood(*myMsg); */
            } else {
              //die
              dbg(FLOODING_CHANNEL, "Packet died due to TTL \n");
@@ -186,6 +196,7 @@ implementation{
            //need to send a ping reply unless it is already a ping reply
            if(myMsg->protocol == 0) {
              pack temp;
+             uint16_t nextHop;
              //time to send ping reply
              dbg(GENERAL_CHANNEL, "PING REPLY EVENT \n");
              dbg(GENERAL_CHANNEL, "-----------------\n");
@@ -195,7 +206,16 @@ implementation{
              makePack(&temp, myMsg->dest, myMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, sequence, (uint8_t*)myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
              dbg(GENERAL_CHANNEL, "Sending Ping Reply Packet below\n");
              logPack(&temp);
-             call FloodingHandler.flood(temp);
+
+             nextHop = call DistanceVector.getNextHop(temp);
+             dbg(ROUTING_CHANNEL, "pack recieved, implementing dvr\n");
+             if(nextHop == 256) {
+               dbg(ROUTING_CHANNEL, "infinite cost or node not in table \n");
+               call FloodingHandler.flood(temp);
+             } else {
+               dbg(ROUTING_CHANNEL, "Sending to Node: %d\n", nextHop);
+               call Sender.send(temp, nextHop);
+             }
 
            } else if (myMsg->protocol == 1) {
              uint8_t i;
@@ -229,6 +249,7 @@ implementation{
    event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
       bool isRunning;
       uint32_t timeNow;
+      uint16_t nextHop;
       dbg(GENERAL_CHANNEL, "PING EVENT \n");
       makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, PROTOCOL_PING, sequence, payload, PACKET_MAX_PAYLOAD_SIZE);
       logPack(&sendPackage);
@@ -236,7 +257,7 @@ implementation{
       isRunning = call sendPacketAgain.isRunning();
       //only start timer if the timer is stopped aka no packets are being currently being sent again
       if(!isRunning) {
-        call sendPacketAgain.startPeriodic( INTERVAL_TIME );
+        call sendPacketAgain.startPeriodic( INTERVAL_TIME + (uint16_t) (call Random.rand16()%200) );
       }
 
       //add packet into the sentPackets lists
@@ -245,8 +266,13 @@ implementation{
       call sentPacketsTime.pushback(timeNow);
       call sentPacketsTimesToSendAgain.pushback(TIMES_TO_SEND_PACKET);
 
-      call FloodingHandler.flood(sendPackage);
-      //Sender.send returns success if it sent. USELESS beacuse does not return anything if node there is not runtime in between sending
+      nextHop = call DistanceVector.getNextHop(sendPackage);
+      if(nextHop == 256) {
+        dbg(ROUTING_CHANNEL, "infinite cost or node not in table \n");
+        call FloodingHandler.flood(sendPackage);
+      } else {
+        call Sender.send(sendPackage, nextHop);
+      }
 
       //increment the sequence number
       sequence++;
