@@ -28,11 +28,8 @@ implementation {
     components new TimerMilliC() as Timer0;
     DistanceVectorP.dropRow -> Timer0;
 
-    components new TimerMilliC() as Timer2;
-    DistanceVectorP.sendPacks -> Timer2;
-
-    /* components new HashmapC(uint16_t, 19) as neighborCost;
-    DistanceVectorP.routingTable->neighborCost; */
+    components RandomC as Random;
+    DistanceVectorP.Random -> Random;
 
     components NeighborHandlerC;
     DistanceVectorP.NeighborHandler->NeighborHandlerC;

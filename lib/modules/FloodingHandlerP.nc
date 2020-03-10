@@ -12,6 +12,7 @@ module FloodingHandlerP {
   uses interface List<uint32_t> as packetArrivalTimes;
 
   uses interface Timer<TMilli> as dropPacket;
+  uses interface Random as Random;
 
   //timer is set to a set interval
   //every interval all packets whos "life expectancy" is at least 75% is dropped. 75 is an arbitrary number
@@ -88,7 +89,7 @@ implementation {
       isRunning = call dropPacket.isRunning();
       //only start timer if the timer is stopped aka the packet records list is empty
       if(!isRunning) {
-        call dropPacket.startPeriodic( INTERVAL_TIME );
+        call dropPacket.startPeriodic( INTERVAL_TIME - (uint16_t) (call Random.rand16()%200));
       }
       //get time now
       timeNow = call dropPacket.getNow();

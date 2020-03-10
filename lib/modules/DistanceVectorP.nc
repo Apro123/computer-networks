@@ -17,9 +17,8 @@ module DistanceVectorP {
     uses interface AMPacket;
     uses interface Timer<TMilli> as tableTimer;
     uses interface Timer<TMilli> as dropRow;
-    uses interface Timer<TMilli> as sendPacks;
-    /* uses interface Hashmap<uint16_t> as routingTable; */
     uses interface NeighborHandler as NeighborHandler;
+    uses interface Random as Random;
 }
 
 implementation{
@@ -32,12 +31,13 @@ implementation{
 
     uint32_t INTERVAL_TIME = 2500;
     uint16_t sequence = 1;
-    uint8_t nextHop[MAX_SIZE];
-    uint8_t cost[MAX_SIZE];
     row routingTable[MAX_SIZE];
     uint8_t currentSize = 0;
-    pack toSend[255];
-    uint8_t numPackToSend = 0;
+    row toSend[5];
+    uint8_t numRowToSend = 0;
+    uint8_t* neighborIDs;
+    uint8_t neighborSize;
+    uint8_t learnedFrom[255];
 
 
     void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint16_t length);
@@ -48,36 +48,47 @@ implementation{
 
     void getNeighborData() {
         uint32_t i;
-        uint16_t size;
-        uint8_t* neighborIDs;
         uint8_t* neighborCost;
-        /* uint8_t nextHop[255];
-        uint8_t cost[255]; */
-        /* dbg(ROUTING_CHANNEL, "FWEFWE"); */
 
 
         neighborIDs = call NeighborHandler.getKeys();
         neighborCost = call NeighborHandler.getCost();
-        size = call NeighborHandler.getSize();
-
-        /* dbg(ROUTING_CHANNEL, "FWEFWE"); */
+        neighborSize = call NeighborHandler.getSize();
 
 
-        /* dbg(ROUTING_CHANNEL, "keys below. Size: %d\n", size); */
-        for(i = 0; i < size; i++) {
-          routingTable[i].dest = neighborIDs[i];
-          routingTable[i].nextHop = neighborIDs[i];
-          routingTable[i].cost = neighborCost[i];
-          routingTable[i].TTL = DV_TTL;
+        if(currentSize == 0) {
+          for(i = 0; i < neighborSize; i++) {
+            routingTable[i].dest = neighborIDs[i];
+            routingTable[i].nextHop = neighborIDs[i];
+            routingTable[i].cost = neighborCost[i];
+            routingTable[i].TTL = DV_TTL;
 
-          currentSize += 1;
-          /* dbg(ROUTING_CHANNEL, "Node: %d, Next Hop: %d, Cost: %d\n", neighborIDs[i], nextHop[neighborIDs[i]], cost[neighborIDs[i]]); */
+            learnedFrom[neighborIDs[i]] = neighborIDs[i];
+
+            currentSize += 1;
+          }
+        } else {
+          //find the neighbors and update them
+          for(i = 0; i < currentSize; i++) {
+            uint8_t j;
+            for(j = 0; j < neighborSize; j++) {
+              //find the neighbor in the routing table and update the cost and the ids
+              if(neighborIDs[j] == routingTable[i].dest) {
+                routingTable[i].nextHop = neighborIDs[j];
+                routingTable[i].cost = neighborCost[j];
+                routingTable[i].TTL = DV_TTL; //need to be updated
+                break;
+              }
+            }
+
+          }
         }
         return;
     }
 
-    void sendTable() {
+    void sendBatch(uint8_t num, uint32_t who) {
       pack temp;
+<<<<<<< HEAD
       uint8_t i;
       uint8_t set[currentSize];
       uint8_t j;
@@ -121,32 +132,53 @@ implementation{
           dbg(ROUTING_CHANNEL, "num pack: %d\n", numPackToSend);
         } */
         call sendPacks.startPeriodic(500);
+=======
+      uint8_t set[sizeof(row)*num];
+      memcpy(set, toSend, sizeof(row)*num);
+      makePack(&temp, TOS_NODE_ID, TOS_NODE_ID, num, 5, sequence, set, sizeof(row)*num);
+      call Sender.send(temp, who);
+    }
+
+    void addRowToSend(row rowToSend, uint32_t who) {
+      toSend[numRowToSend] = rowToSend;
+      numRowToSend += 1;
+      if(numRowToSend == 5) {
+        sendBatch(5, who);
+        numRowToSend = 0;
       }
     }
 
+    void sendTable() {
+      uint8_t i = 0;
+      uint8_t n = 0;
+      for(n = 0; n < neighborSize; n++) {
+        for(i = 0; i < currentSize; i++) {
+          row temp = routingTable[i];
+          if(learnedFrom[routingTable[i].dest] == neighborIDs[n]) { //its own
+            temp.cost = 255; //split horizon with poison reverse
+          }
+          addRowToSend(temp, neighborIDs[n]);
+        }
+        sendBatch(numRowToSend, neighborIDs[n]); //send any remaining
+>>>>>>> origin/proj2A
+      }
+
+
+    }
+
     task void sendVector() {
-        /* uint32_t now; */
-        bool isRunning;
-
         sendTable();
-        /* makePack(&temp, TOS_NODE_ID, TOS_NODE_ID, 2, 5, sequence, (uint8_t*)"route", PACKET_MAX_PAYLOAD_SIZE); */
 
-        isRunning = call tableTimer.isRunning();
-        if(!isRunning) {
-            /* now = call tableTimer.getNow();
-            call tableTimer.startPeriodicAt(now-75, 500); */
-            call tableTimer.startPeriodic(INTERVAL_TIME*24);
+        if(call tableTimer.isOneShot()) {
+          call tableTimer.startPeriodic(500 + (uint16_t) (call Random.rand16()%200));
         }
 
-        // AM_BROADCAST_ADDR = 65535
-        /* logPack(&temp); */
-        /* call Sender.send(temp, AM_BROADCAST_ADDR); */
         sequence = sequence + 1;
     }
 
     command void DistanceVector.runTimer() {
-      call tableTimer.startOneShot(INTERVAL_TIME/2);
-      call dropRow.startPeriodic(INTERVAL_TIME*8);
+      call tableTimer.startOneShot(INTERVAL_TIME/4 - + (uint16_t) (call Random.rand16()%200));
+      call dropRow.startPeriodic(INTERVAL_TIME*32 + (uint16_t) (call Random.rand16()%200));
     }
 
     event void tableTimer.fired() {
@@ -155,6 +187,7 @@ implementation{
       post sendVector();
     }
 
+<<<<<<< HEAD
     event void sendPacks.fired() {
       if(numPackToSend == 0) {
         call sendPacks.stop();
@@ -167,6 +200,8 @@ implementation{
       }
     }
 
+=======
+>>>>>>> origin/proj2A
     event void dropRow.fired() {
       uint8_t i;
       uint8_t newSize = currentSize;
@@ -188,6 +223,10 @@ implementation{
       uint8_t i;
       dbg(ROUTING_CHANNEL, "Routing Table: \n");
       dbg(ROUTING_CHANNEL, "Dest\tHop\tCount\n");
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/proj2A
 
       for(i = 0; i < currentSize; i++) {
         uint8_t hop = routingTable[i].nextHop;
@@ -205,6 +244,10 @@ implementation{
         bool exists = FALSE;
         row tempRow = set[i];
         uint8_t newCost = tempRow.cost + linkCost;
+        if(tempRow.cost == 255) {
+          newCost = 255;
+        }
+
         tempRow.nextHop = src;
         //for each row update the table
         for(j = 0; j < currentSize; ++j) {
@@ -212,7 +255,7 @@ implementation{
             exists = TRUE;
             if(newCost < routingTable[j].cost) {
               //found a better route
-              routingTable[j] = tempRow;
+              memcpy((routingTable+j), &tempRow, sizeof(row));
               routingTable[j].cost = newCost;
               break;
             } else if(tempRow.nextHop == routingTable[j].nextHop) {
@@ -225,10 +268,13 @@ implementation{
         }
         if(!exists && j == currentSize) {
           //new node to add into the table
-          routingTable[j] = tempRow;
+          memcpy((routingTable+j), &tempRow, sizeof(row));
+          /* routingTable[j] = tempRow; */
+          learnedFrom[routingTable[j].dest] = src;
           routingTable[j].TTL = DV_TTL;
           routingTable[j].cost = newCost;
           currentSize += 1;
+
         }
 
       }
@@ -246,22 +292,31 @@ implementation{
               link = routingTable[i].cost;
             }
           }
-          /* if(TOS_NODE_ID == 5) {
-            dbg(ROUTING_CHANNEL, "cost: %d\n", link);
-          } */
+
           updateTable((row*) myMsg->payload, myMsg->TTL, link, src);
-
-          if(myMsg->seq <= sequence) {
-            sendTable();
-          }
-
-          /* logPackDVR(myMsg); */
 
           return msg;
        }
 
        dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
        return msg;
+    }
+
+    command uint16_t DistanceVector.getNextHop(pack pk) {
+      uint8_t i;
+
+      for(i = 0; i < currentSize; i++) {
+        uint8_t hop = routingTable[i].nextHop;
+        uint8_t count = routingTable[i].cost;
+        if(routingTable[i].dest == pk.dest) {
+          if(count == 255) {
+            return 256; //one more than 255 which is the number of possible nodes.
+          }else {
+            return (uint16_t)hop;
+          }
+        }
+      }
+      return 256; //not found
     }
 
     void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t protocol, uint16_t seq, uint8_t* payload, uint16_t length){
