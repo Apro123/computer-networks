@@ -42,7 +42,7 @@ implementation{
         isRunning = call neighborTimer.isRunning();
         if(!isRunning) {
             now = call neighborTimer.getNow();
-            call neighborTimer.startPeriodicAt(now-100, INTERVAL_TIME*50 + (uint16_t) (call Random.rand16()%200));
+            call neighborTimer.startPeriodicAt(now-100, INTERVAL_TIME*8 + (uint16_t) (call Random.rand16()%200));
         }
 
         call Sender.send(temp, AM_BROADCAST_ADDR);
@@ -54,7 +54,7 @@ implementation{
       post findNeighbors(); //calling task from previous method
    }
    command void NeighborHandler.runTimer() {
-       call neighborTimer.startOneShot(10);
+       call neighborTimer.startOneShot(10 + (uint16_t) (call Random.rand16()%200));
    }
     command void NeighborHandler.printNeighbors(){
         uint32_t i;
@@ -140,7 +140,7 @@ implementation{
      for(i = 0; i < tempSize; i++) {
        keys[i] = (uint8_t) tempKeys[i];
        /* memcpy(costs[i], call neighborCost.get(keys[i]) / TimesSent, sizeof()) */
-       costs[i] = (uint8_t) (call neighborCost.get(keys[i]) / TimesSent);
+       costs[i] = (uint8_t) TimesSent/(call neighborCost.get(keys[i]));
        /* call neighborWithCost.insert(keys[i], call neighborCost.get(keys[i]) / TimesSent); */
      }
      /* call neighborWithCost.insert(TOS_NODE_ID, 0); //did this so we the current neighbor can tell itself it has the cost of 0 */
