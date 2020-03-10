@@ -38,7 +38,7 @@ implementation{
     uint8_t* neighborIDs;
     uint8_t neighborSize;
     uint8_t learnedFrom[255];
-    bool SplitHorizon = TRUE;
+    bool SplitHorizon = FALSE;
 
 
     void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint16_t length);
