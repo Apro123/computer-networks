@@ -89,51 +89,6 @@ implementation{
 
     void sendBatch(uint8_t num, uint32_t who) {
       pack temp;
-<<<<<<< HEAD
-      uint8_t i;
-      uint8_t set[currentSize];
-      uint8_t j;
-      row routingTableTemp[MAX_SIZE];
-
-
-      // Poison Reverse
-      memcpy(routingTableTemp, routingTable, 255);
-      for(j= 0; j < currentSize; j++) {
-        if(routingTableTemp[j].dest == TOS_NODE_ID) {
-          routingTableTemp[j].cost = 255;
-        }
-      }
-
-
-
-      if(currentSize < 5) {
-        memcpy(set, routingTableTemp, sizeof(row)*currentSize);
-        /* for(i = 0; i < currentSize; i++) {
-          uint8_t hop = ((row*) set)[i].nextHop;
-          uint8_t count = ((row*) set)[i].cost;
-          if(hop != 0) {
-            dbg(ROUTING_CHANNEL, "%d\t\t%d\t%d\n", ((row*) set)[i].dest, hop, count);
-          }
-        } */
-        makePack(&temp, TOS_NODE_ID, TOS_NODE_ID, currentSize, 5, sequence, set, sizeof(row)*currentSize);
-        call Sender.send(temp, AM_BROADCAST_ADDR);
-      } else {
-        for(i = 0; i < currentSize/5; i++) {
-          memcpy(set+(sizeof(row)*i), routingTableTemp, sizeof(row)*5);
-          makePack(&temp, TOS_NODE_ID, TOS_NODE_ID, 5, 5, sequence, set, sizeof(row)*5);
-          toSend[numPackToSend-1] = temp;
-          numPackToSend += 1;
-        }
-        memcpy(set+(sizeof(row)*i), routingTableTemp, sizeof(row)*(currentSize%5));
-        makePack(&temp, TOS_NODE_ID, TOS_NODE_ID, currentSize%5, 5, sequence, set, sizeof(row)*currentSize%5);
-        toSend[numPackToSend-1] = temp;
-        numPackToSend += 1;
-
-        /* if(TOS_NODE_ID == 4) {
-          dbg(ROUTING_CHANNEL, "num pack: %d\n", numPackToSend);
-        } */
-        call sendPacks.startPeriodic(500);
-=======
       uint8_t set[sizeof(row)*num];
       memcpy(set, toSend, sizeof(row)*num);
       makePack(&temp, TOS_NODE_ID, TOS_NODE_ID, num, 5, sequence, set, sizeof(row)*num);
@@ -169,13 +124,12 @@ implementation{
           row temp = routingTable[i];
           addRowToSend(temp, AM_BROADCAST_ADDR);
         }
-<<<<<<< HEAD
+
         sendBatch(numRowToSend, neighborIDs[n]); //send any remaining
->>>>>>> origin/proj2A
-=======
+
         sendBatch(numRowToSend, AM_BROADCAST_ADDR); //send any remaining
         numRowToSend = 0;
->>>>>>> origin/proj2A
+
       }
 
 
@@ -203,21 +157,6 @@ implementation{
       post sendVector();
     }
 
-<<<<<<< HEAD
-    event void sendPacks.fired() {
-      if(numPackToSend == 0) {
-        call sendPacks.stop();
-      } else {
-        call Sender.send(toSend[numPackToSend-1], AM_BROADCAST_ADDR);
-        numPackToSend -= 1;
-        // if(TOS_NODE_ID == 4) {
-        //   dbg(ROUTING_CHANNEL, "hit\n");
-        // }
-      }
-    }
-
-=======
->>>>>>> origin/proj2A
     event void dropRow.fired() {
       uint8_t i;
       uint8_t newSize = currentSize;
@@ -239,10 +178,6 @@ implementation{
       uint8_t i;
       dbg(ROUTING_CHANNEL, "Routing Table: \n");
       dbg(ROUTING_CHANNEL, "Dest\tHop\tCount\n");
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/proj2A
 
       for(i = 0; i < currentSize; i++) {
         uint8_t hop = routingTable[i].nextHop;
