@@ -8,7 +8,7 @@ def main():
     s.runTime(1);
 
     # Load the the layout of the network.
-    s.loadTopo("square.topo");
+    s.loadTopo("long_line.topo");
 
     # Add a noise model to all of the motes.
     s.loadNoise("no_noise.txt");
@@ -23,7 +23,7 @@ def main():
     # s.addChannel(s.NEIGHBOR_CHANNEL);
 
     # After sending a ping, simulate a little to prevent collision.
-    s.runTime(4);
+    s.runTime(400);
     # s.ping(2, 3, "Hello, World");
     # s.runTime(1);
     #
