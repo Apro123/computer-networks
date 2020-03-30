@@ -289,9 +289,25 @@ implementation{
 
    event void CommandHandler.printDistanceVector(){}
 
-   event void CommandHandler.setTestServer(){}
+   event void CommandHandler.setTestServer(uint8_t port){
+     dbg(TRANSPORT_CHANNEL, "Server Node %d\n", TOS_NODE_ID);
+     dbg(TRANSPORT_CHANNEL, "Listening at port: %d\n", port);
+   }
 
-   event void CommandHandler.setTestClient(){}
+   event void CommandHandler.setTestClient(uint8_t dest, uint8_t srcPort, uint8_t destPort, uint8_t transfer){
+     dbg(TRANSPORT_CHANNEL, "Client Node %d\n", TOS_NODE_ID);
+     dbg(TRANSPORT_CHANNEL, "dest: %d\n", dest);
+     dbg(TRANSPORT_CHANNEL, "srcPort: %d\n", srcPort);
+     dbg(TRANSPORT_CHANNEL, "destPort: %d\n", destPort);
+     dbg(TRANSPORT_CHANNEL, "bytes to transfer: %d\n", transfer);
+   }
+
+   event void CommandHandler.closeClient(uint8_t dest, uint8_t srcPort, uint8_t destPort) {
+     dbg(TRANSPORT_CHANNEL, "Closing Client Node %d\n", TOS_NODE_ID);
+     dbg(TRANSPORT_CHANNEL, "dest: %d\n", dest);
+     dbg(TRANSPORT_CHANNEL, "srcPort: %d\n", srcPort);
+     dbg(TRANSPORT_CHANNEL, "destPort: %d\n", destPort);
+   }
 
    event void CommandHandler.setAppServer(){}
 

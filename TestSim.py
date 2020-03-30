@@ -13,6 +13,9 @@ class TestSim:
     CMD_PING = 0
     CMD_NEIGHBOR_DUMP = 1
     CMD_ROUTE_DUMP=3
+    CMD_TEST_CLIENT=4
+    CMD_TEST_SERVER=5
+    CMD_CLOSE_CLIENT=6
 
     # CHANNELS - see includes/channels.h
     COMMAND_CHANNEL="command";
@@ -124,6 +127,15 @@ class TestSim:
 
     def routeDMP(self, destination):
         self.sendCMD(self.CMD_ROUTE_DUMP, destination, "routing command");
+
+    def testServer(self, address, port=80):
+        self.sendCMD(self.CMD_TEST_SERVER, address, "{0}".format(chr(port)));
+
+    def testClient(self, id, destination, srcPort, destPort, transfer):
+        self.sendCMD(self.CMD_TEST_CLIENT, id, "{0}{1}{2}{3}".format(chr(destination), chr(srcPort), chr(destPort), chr(transfer)));
+
+    def closeClient(self, id, destination, srcPort, destPort):
+        self.sendCMD(self.CMD_CLOSE_CLIENT, id, "{0}{1}{2}".format(chr(destination), chr(srcPort), chr(destPort)));
 
     def addChannel(self, channelName, out=sys.stdout):
         print 'Adding Channel', channelName;
