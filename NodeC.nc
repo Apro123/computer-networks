@@ -10,6 +10,7 @@
 #include <Timer.h>
 #include "includes/CommandMsg.h"
 #include "includes/packet.h"
+#include "includes/socket.h"
 
 configuration NodeC{
 }
@@ -54,4 +55,19 @@ implementation {
 
     components RandomC as Random;
     Node.Random -> Random;
+
+    components TransportC;
+    Node.Transport->TransportC;
+
+    components new ListC(socket_t, MAX_NUM_OF_SOCKETS) as acceptedSockets;
+    Node.acceptedSockets -> acceptedSockets;
+
+    components new TimerMilliC() as socketTimer;
+    Node.printSocketInfo -> socketTimer;
+
+    components new TimerMilliC() as clientWrite;
+    Node.clientWrite -> clientWrite;
+
+    components new TimerMilliC() as stopWait;
+    Node.stopWait -> stopWait;
 }

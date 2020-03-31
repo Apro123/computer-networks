@@ -1,4 +1,4 @@
-#include "../../packet.h"
+#include "../../includes/packet.h"
 #include "../../includes/socket.h"
 
 /**
@@ -16,6 +16,10 @@
  */
 
 interface Transport{
+
+  command bool isEstablished(socket_t t);
+  command error_t fireSynAckAgain();
+  command socket_t* getNewlyEstablished();
    /**
     * Get a socket if there is one available.
     * @Side Client/Server
@@ -45,7 +49,7 @@ interface Transport{
     * if there is one, connect to it.
     * @param
     *    socket_t fd: file descriptor that is associated with the socket
-    *       that is attempting an accept. remember, only do on listen. 
+    *       that is attempting an accept. remember, only do on listen.
     * @side Server
     * @return socket_t - returns a new socket if the connection is
     *    accepted. this socket is a copy of the server socket but with
@@ -72,10 +76,10 @@ interface Transport{
    command uint16_t write(socket_t fd, uint8_t *buff, uint16_t bufflen);
 
    /**
-    * This will pass the packet so you can handle it internally. 
+    * This will pass the packet so you can handle it internally.
     * @param
     *    pack *package: the TCP packet that you are handling.
-    * @Side Client/Server 
+    * @Side Client/Server
     * @return uint16_t - return SUCCESS if you are able to handle this
     *    packet or FAIL if there are errors.
     */
@@ -102,7 +106,7 @@ interface Transport{
     * Attempts a connection to an address.
     * @param
     *    socket_t fd: file descriptor that is associated with the socket
-    *       that you are attempting a connection with. 
+    *       that you are attempting a connection with.
     * @param
     *    socket_addr_t *addr: the destination address and port where
     *       you will atempt a connection.
@@ -116,7 +120,7 @@ interface Transport{
     * Closes the socket.
     * @param
     *    socket_t fd: file descriptor that is associated with the socket
-    *       that you are closing. 
+    *       that you are closing.
     * @side Client/Server
     * @return socket_t - returns SUCCESS if you are able to attempt
     *    a closure with the fd passed, else return FAIL.
@@ -127,7 +131,7 @@ interface Transport{
     * A hard close, which is not graceful. This portion is optional.
     * @param
     *    socket_t fd: file descriptor that is associated with the socket
-    *       that you are hard closing. 
+    *       that you are hard closing.
     * @side Client/Server
     * @return socket_t - returns SUCCESS if you are able to attempt
     *    a closure with the fd passed, else return FAIL.
@@ -138,9 +142,9 @@ interface Transport{
     * Listen to the socket and wait for a connection.
     * @param
     *    socket_t fd: file descriptor that is associated with the socket
-    *       that you are hard closing. 
+    *       that you are hard closing.
     * @side Server
-    * @return error_t - returns SUCCESS if you are able change the state 
+    * @return error_t - returns SUCCESS if you are able change the state
     *   to listen else FAIL.
     */
    command error_t listen(socket_t fd);

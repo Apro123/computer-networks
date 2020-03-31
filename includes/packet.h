@@ -11,7 +11,7 @@
 
 enum{
 	PACKET_HEADER_LENGTH = 8,
-	PACKET_MAX_PAYLOAD_SIZE = 28 - PACKET_HEADER_LENGTH,
+	PACKET_MAX_PAYLOAD_SIZE = 28 - PACKET_HEADER_LENGTH, //20
 	MAX_TTL = 15
 };
 
@@ -21,7 +21,7 @@ typedef nx_struct pack{
 	nx_uint16_t seq;		//Sequence Number
 	nx_uint8_t TTL;		//Time to Live
 	nx_uint8_t protocol;
-	nx_uint8_t payload[PACKET_MAX_PAYLOAD_SIZE];
+	nx_uint8_t payload[PACKET_MAX_PAYLOAD_SIZE]; //20 uint8_t allowed
 }pack;
 
 /*
