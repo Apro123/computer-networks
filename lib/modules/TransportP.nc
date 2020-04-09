@@ -23,11 +23,11 @@ module TransportP {
   uses interface Timer<TMilli> as closeTimer;
 }
 implementation {
-  socket_t newList[MAX_NUM_OF_SOCKETS+1];
+  socket_t newList[MAX_NUM_OF_SOCKETS+1]; 
   socket_t socketIndex = 0;
-  uint16_t sockSeq[MAX_NUM_OF_SOCKETS];
+  uint16_t sockSeq[MAX_NUM_OF_SOCKETS]; // 10
   uint16_t randomSeq = 0;
-  pack packTempSA;
+  pack packTempSA; 
   socket_t toClose = MAX_NUM_OF_SOCKETS;
 
   event void socketTimer.fired() {
@@ -35,10 +35,10 @@ implementation {
   }
 
   event void closeTimer.fired() {
-    socket_store_t temp = call sockets.get(toClose);
+    socket_store_t temp = call sockets.get(toClose); 
     dbg(TRANSPORT_CHANNEL, "setting socket to closed\n");
     temp.state = CLOSED;
-    call sockets.set(toClose, temp);
+    call sockets.set(toClose, temp); 
   }
 
   command bool Transport.isEstablished(socket_t t) {
@@ -81,7 +81,7 @@ implementation {
   }
 
   //server only
-  error_t fireSynAck(socket_t fd, pack* package)  {
+  error_t fireSynAck(socket_t fd, pack* package)  { 
     socket_store_t sock = call sockets.get(fd); //got from call
     if(sock.state == SYN_RCVD) {
       //send synack packet
@@ -98,7 +98,7 @@ implementation {
       prev = (tcpHeader*) package->payload;
 
       tcpTempSA.srcPort = prev->destPort; //flip the src and dest port
-      tcpTempSA.destPort = prev->srcPort;
+      tcpTempSA.destPort = prev->srcPort; 
 
       if(!sockSeq[fd]) {
         sockSeq[fd] = 1;
