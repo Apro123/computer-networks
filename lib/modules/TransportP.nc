@@ -24,8 +24,8 @@ module TransportP {
 }
 implementation {
   socket_t newList[MAX_NUM_OF_SOCKETS+1];
-  socket_t socketIndex = 0;
-  uint16_t sockSeq[MAX_NUM_OF_SOCKETS];
+  socket_t socketIndex = 0; //number of sockets
+  uint16_t sockSeq[MAX_NUM_OF_SOCKETS]; //sockets
   uint16_t randomSeq = 0;
   pack packTempSA;
   socket_t toClose = MAX_NUM_OF_SOCKETS;
@@ -230,7 +230,9 @@ implementation {
    *    from the pass buffer. This may be shorter then bufflen
    */
   command uint16_t Transport.write(socket_t fd, uint8_t *buff, uint16_t bufflen) {
-
+    //fd is the index of the socket_store_t sockets.get(fd)
+    //turn the uint16 into two unint 8 in node.nc file in the clientWrite timer.fired()
+    //make a new timer here and call that periodically starting when the connection is ESTABLISHED
   }
 
   /**
@@ -311,7 +313,7 @@ implementation {
     } else if(t-> flag == SYN_ACK) {
       //client
       if(sock.state == SYN_SENT) {
-        sock.state = ESTABLISHED;
+        sock.state = ESTABLISHED; ///client connection established, call the client write timer periodically here
         dbg(TRANSPORT_CHANNEL, "socket state changed to ESTABLISHED\n");
         call sockets.set(fd, sock);
         return 2; //check if server or client is done in node file;

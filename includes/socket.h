@@ -23,7 +23,7 @@ typedef uint8_t socket_port_t;
 // socket_addr_t is a simplified version of an IP connection.
 typedef nx_struct socket_addr_t{
     nx_socket_port_t port;
-    nx_uint16_t addr;
+    nx_uint16_t addr; //node id of the destination?
 }socket_addr_t;
 
 
@@ -34,8 +34,8 @@ typedef uint8_t socket_t;
 typedef struct socket_store_t{
     uint8_t flag;
     enum socket_state state;
-    socket_port_t src;
-    socket_addr_t dest; //local recieving address/port
+    socket_port_t src; //src port?
+    socket_addr_t dest; //dest address/port?
 
     // This is the sender portion.
     uint8_t sendBuff[SOCKET_BUFFER_SIZE];
