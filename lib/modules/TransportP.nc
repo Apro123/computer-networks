@@ -44,7 +44,13 @@ implementation {
   }
 
   event void buffTimer.fired() {
-    dbg(TRANSPORT_CHANNEL, "Timer for buffer");
+    // dbg(TRANSPORT_CHANNEL, "Timer for buffer");
+    bool isRunning;
+    isRunning = call buffTimer.isRunning();
+    
+    if (!isRunning) {
+      call buffTimer.startPeriodic(600 + (uint16_t)(call Random.rand16()%600));
+    }    
   }
 
   command bool Transport.isEstablished(socket_t t) {
@@ -241,7 +247,7 @@ implementation {
     //make a new timer here and call that periodically starting when the connection is ESTABLISHED
     tcpHeader tcpPack;
     socket_store_t sock = call sockets.get(fd);
-    bool isRunning;
+    // bool isRunning;
     uint8_t i;
 
     tcpPack.destPort = sock.dest.port;
@@ -252,13 +258,13 @@ implementation {
     tcpPack.advertisedWindow = 0;
     
 
-
-    isRunning = call buffTimer.isRunning();
-    if(!isRunning) {
-      call buffTimer.startPeriodic(600 + (uint16_t)(call Random.rand16()%600));
-    }
+    signal buffTimer.fired();
+    // isRunning = call buffTimer.isRunning();
+    // if(!isRunning) {
+    //   call buffTimer.startPeriodic(600 + (uint16_t)(call Random.rand16()%600));
+    // }
     for(i = 0; i < bufflen; i++) {
-        sock.sendBuff[i] = buff;
+       (uint8_t*) sock.sendBuff[i] = buff;
     }
     memcpy(tcpPack.data, buff, bufflen);
   }
