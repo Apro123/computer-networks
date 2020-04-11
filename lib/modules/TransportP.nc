@@ -23,8 +23,6 @@ module TransportP {
   uses interface Timer<TMilli> as closeTimer;
 
   uses interface Timer<TMilli> as buffTimer;
-
-  uses interface tcpHeader as tcpPack;
 }
 implementation {
   socket_t newList[MAX_NUM_OF_SOCKETS+1];
@@ -241,51 +239,28 @@ implementation {
     //fd is the index of the socket_store_t sockets.get(fd)
     //turn the uint16 into two unint 8 in node.nc file in the clientWrite timer.fired()
     //make a new timer here and call that periodically starting when the connection is ESTABLISHED
-
+    tcpHeader tcpPack;
     socket_store_t sock = call sockets.get(fd);
     bool isRunning;
-    uint8_t i, j;
-    isRunning = call buffTimer.isRunning();
+    uint8_t i;
 
+    tcpPack.destPort = sock.dest.port;
+    tcpPack.srcPort = sock.src;
+    tcpPack.seq = sockSeq[fd];
+    tcpPack.ack = 0;
+    tcpPack.flag = ACK;
+    tcpPack.advertisedWindow = 0;
+    
+
+
+    isRunning = call buffTimer.isRunning();
     if(!isRunning) {
       call buffTimer.startPeriodic(600 + (uint16_t)(call Random.rand16()%600));
     }
-
-    for(i = 0; i < bufflen; i += 5) {
-      for(j = 0; j < 5; i++) {
-      sock.sendBuff[i] = sock;
-      }
+    for(i = 0; i < bufflen; i++) {
+        sock.sendBuff[i] = buff;
     }
-
-
-
-
-    
-    // socket_store_t buffList = call buffer.get(fd);
-    // // socket_store_t socket;
-    // // bufflist = call buffer.get(fd);
-    // bool wrap; // this is for wrapping when buffer is filled
-    // bool windowEnd;
-    // uint8_t windowSize, write, advertisedWindow;
-    // windowSize, write = TCP_PACKET_MAX_PAYLOAD_SIZE * SOCKET_BUFFER_SIZE;
-
-    // if(bufflen == 0) {
-    //   dbg(TRANSPORT_CHANNEL, "Buffer is empty");
-    // }
-
-    // uint8_t windowStart = socket.lastWritten; 
-    // // windowStart = socket.lastWrittens;
-
-    // if (bufflen < SOCKET_BUFFER_SIZE - windowStart) {
-    //   memcpy(socket.sendBuff + windowStart, buff, bufflen);
-    //   socket.lastWritten = windowStart + bufflen;
-    //   call bufflist.insert(fd, socket);
-    // }
-
-    // if (call Transport.isEstablished(fd) == TRUE) {
-    //   call buffTimer.startPeriodicAt(call buffTimer.getNow(),bufflen);
-    // }
-
+    memcpy(tcpPack.data, buff, bufflen);
   }
 
   /**
