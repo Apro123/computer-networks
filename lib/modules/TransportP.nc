@@ -21,6 +21,10 @@ module TransportP {
   uses interface FloodingHandler;
 
   uses interface Timer<TMilli> as closeTimer;
+
+  uses interface Timer<TMilli> as buffTimer;
+
+  uses interface tcpHeader as tcpPack;
 }
 implementation {
   socket_t newList[MAX_NUM_OF_SOCKETS+1];
@@ -39,6 +43,10 @@ implementation {
     dbg(TRANSPORT_CHANNEL, "setting socket to closed\n");
     temp.state = CLOSED;
     call sockets.set(toClose, temp);
+  }
+
+  event void buffTimer.fired() {
+    dbg(TRANSPORT_CHANNEL, "Timer for buffer");
   }
 
   command bool Transport.isEstablished(socket_t t) {
@@ -233,6 +241,51 @@ implementation {
     //fd is the index of the socket_store_t sockets.get(fd)
     //turn the uint16 into two unint 8 in node.nc file in the clientWrite timer.fired()
     //make a new timer here and call that periodically starting when the connection is ESTABLISHED
+
+    socket_store_t sock = call sockets.get(fd);
+    bool isRunning;
+    uint8_t i, j;
+    isRunning = call buffTimer.isRunning();
+
+    if(!isRunning) {
+      call buffTimer.startPeriodic(600 + (uint16_t)(call Random.rand16()%600));
+    }
+
+    for(i = 0; i < bufflen; i += 5) {
+      for(j = 0; j < 5; i++) {
+      sock.sendBuff[i] = sock;
+      }
+    }
+
+
+
+
+    
+    // socket_store_t buffList = call buffer.get(fd);
+    // // socket_store_t socket;
+    // // bufflist = call buffer.get(fd);
+    // bool wrap; // this is for wrapping when buffer is filled
+    // bool windowEnd;
+    // uint8_t windowSize, write, advertisedWindow;
+    // windowSize, write = TCP_PACKET_MAX_PAYLOAD_SIZE * SOCKET_BUFFER_SIZE;
+
+    // if(bufflen == 0) {
+    //   dbg(TRANSPORT_CHANNEL, "Buffer is empty");
+    // }
+
+    // uint8_t windowStart = socket.lastWritten; 
+    // // windowStart = socket.lastWrittens;
+
+    // if (bufflen < SOCKET_BUFFER_SIZE - windowStart) {
+    //   memcpy(socket.sendBuff + windowStart, buff, bufflen);
+    //   socket.lastWritten = windowStart + bufflen;
+    //   call bufflist.insert(fd, socket);
+    // }
+
+    // if (call Transport.isEstablished(fd) == TRUE) {
+    //   call buffTimer.startPeriodicAt(call buffTimer.getNow(),bufflen);
+    // }
+
   }
 
   /**
@@ -390,7 +443,12 @@ implementation {
    *    from the pass buffer. This may be shorter then bufflen
    */
   command uint16_t Transport.read(socket_t fd, uint8_t *buff, uint16_t bufflen) {
+    // uint8_t read = 0;
+    // uint8_t sizeRead;
+    // uint8_t next;
+    // pack packet;
 
+    // socket_store_t = call buffer.get(fd);
   }
 
   /**
