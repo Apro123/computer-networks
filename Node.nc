@@ -412,6 +412,7 @@ implementation{
 
    event void CommandHandler.setTestClient(uint8_t dest, uint8_t srcPort, uint8_t destPort, uint8_t transfer){
      // to convert from uint16 to two uint8 use >> operator
+     //1, 2, 3, 4, ... transfer
      socket_t sock;
      uint8_t *buffer[15]; //bufflen is 15 in transport.write(...)
      uint8_t i;
@@ -446,11 +447,24 @@ implementation{
      } else {
        dbg(TRANSPORT_CHANNEL, "binding failed\n");
      }
+
+    call clientWrite.sat
     for (i = 0; i < 15; i++) {
       buffer[i] = transfer;
     }
-    sock = call Transport.write(fd, (uint8_t*) buffer, 15);
+    sock =
+    lastBitWritten = call Transport.write(fd, (uint8_t*) buffer, 15);
 
+    transfer number = 17 //global var
+
+    uint8t * buf[transfer] //in this method
+    then push into the buff
+
+
+    //in the write timer
+    lastbitwritteninto the socket = 13 //global var
+
+    14, 15, 16, ... 17
 
    }
 
