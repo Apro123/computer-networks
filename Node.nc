@@ -461,7 +461,7 @@ implementation{
 
     // in the write timer
     // lastbitwritteninto the socket = 13 // global variable and 13 because uint8_t
-    // 14, 15, 16, ... 17
+    // 14, 15, 16, ... 17 
 
    }
 
