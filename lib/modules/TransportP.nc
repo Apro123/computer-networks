@@ -30,6 +30,7 @@ implementation {
   uint16_t sockSeq[MAX_NUM_OF_SOCKETS]; //sockets
   uint16_t randomSeq = 0;
   pack packTempSA;
+  pack bufferPack;
   socket_t toClose = MAX_NUM_OF_SOCKETS;
 
   event void socketTimer.fired() {
@@ -44,13 +45,14 @@ implementation {
   }
 
   event void buffTimer.fired() {
-    // dbg(TRANSPORT_CHANNEL, "Timer for buffer");
     bool isRunning;
     isRunning = call buffTimer.isRunning();
     
     if (!isRunning) {
       call buffTimer.startPeriodic(600 + (uint16_t)(call Random.rand16()%600));
-    }    
+    }  
+
+    dbg(TRANSPORT_CHANNEL, "Timer for buffer");  
   }
 
   command bool Transport.isEstablished(socket_t t) {
@@ -250,12 +252,20 @@ implementation {
     // bool isRunning;
     uint8_t i;
 
+    bufferPack.dest = tcpPack.destPort;
+    bufferPack.src = TOS_NODE_ID;
+    bufferPack.seq = randomSeq;
+    bufferPack.TTL = bufflen; // sending data
+    bufferPack.protocol = 4; // TCP protocol
+
     tcpPack.destPort = sock.dest.port;
     tcpPack.srcPort = sock.src;
     tcpPack.seq = sockSeq[fd];
-    tcpPack.ack = 0;
+    tcpPack.ack = bufflen;
     tcpPack.flag = ACK;
-    tcpPack.advertisedWindow = 0;
+    tcpPack.advertisedWindow = bufflen;
+
+     memcpy(tcpPack.data, buff, bufflen);
     
 
     signal buffTimer.fired();
@@ -266,7 +276,7 @@ implementation {
     for(i = 0; i < bufflen; i++) {
        (uint8_t*) sock.sendBuff[i] = buff;
     }
-    memcpy(tcpPack.data, buff, bufflen);
+   
   }
 
   /**

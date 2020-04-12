@@ -58,6 +58,8 @@ implementation{
    uint8_t lastByteWritten;
    bool SERVER;
    uint8_t newEstaCheck;
+   uint8_t lastBitWritten;
+   uint8_t transferNum = 13;
 
    // Prototypes
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
@@ -110,6 +112,7 @@ implementation{
    event void clientWrite.fired() {
      /* dbg(TRANSPORT_CHANNEL, "client write fired\n"); */
      //if buffer is not empty and transfer is not done
+    //  lastBitWritten = call Transport.write(fd, (uint8_t*) transferNum, 15);
    }
 
    event void stopWait.fired() {
@@ -413,7 +416,7 @@ implementation{
    event void CommandHandler.setTestClient(uint8_t dest, uint8_t srcPort, uint8_t destPort, uint8_t transfer){
      // to convert from uint16 to two uint8 use >> operator
      socket_t sock;
-     uint8_t *buffer[15]; //bufflen is 15 in transport.write(...)
+     uint8_t buffer[transfer]; 
      uint8_t i;
      bool bindCheck;
      dbg(TRANSPORT_CHANNEL, "Client Node %d\n", TOS_NODE_ID);
@@ -449,8 +452,16 @@ implementation{
     for (i = 0; i < 15; i++) {
       buffer[i] = transfer;
     }
-    sock = call Transport.write(fd, (uint8_t*) buffer, 15);
+    call clientWrite.startPeriodic(INTERVAL_TIME*4 + (uint16_t) (call Random.rand16()%200));
+    lastBitWritten = call Transport.write(fd, transfer, 15);
 
+    // transfer number 17 //global var
+    // uint8_t * buff[transfer] // in this method
+    // Then push into the buff
+
+    // in the write timer
+    // lastbitwritteninto the socket = 13 // global variable and 13 because uint8_t
+    // 14, 15, 16, ... 17
 
    }
 
