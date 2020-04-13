@@ -41,4 +41,7 @@ implementation {
 
   components new TimerMilliC() as closeTimer;
   TransportP.closeTimer -> closeTimer;
+
+  components new TimerMilliC() as buffTimer;
+  TransportP.buffTimer -> buffTimer;
 }

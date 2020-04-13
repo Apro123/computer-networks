@@ -45,14 +45,7 @@ implementation {
   }
 
   event void buffTimer.fired() {
-    bool isRunning;
-    isRunning = call buffTimer.isRunning();
-    
-    if (!isRunning) {
-      call buffTimer.startPeriodic(600 + (uint16_t)(call Random.rand16()%600));
-    }  
-
-    dbg(TRANSPORT_CHANNEL, "Timer for buffer");  
+     
   }
 
   command bool Transport.isEstablished(socket_t t) {
@@ -247,6 +240,7 @@ implementation {
     //fd is the index of the socket_store_t sockets.get(fd)
     //turn the uint16 into two unint 8 in node.nc file in the clientWrite timer.fired()
     //make a new timer here and call that periodically starting when the connection is ESTABLISHED
+    bool isRunning;
     tcpHeader tcpPack;
     socket_store_t sock = call sockets.get(fd);
     // bool isRunning;
@@ -265,16 +259,16 @@ implementation {
     tcpPack.flag = ACK;
     tcpPack.advertisedWindow = bufflen;
 
-     memcpy(tcpPack.data, buff, bufflen);
+    //  memcpy(tcpPack.data, buff, bufflen);
     
 
-    signal buffTimer.fired();
-    // isRunning = call buffTimer.isRunning();
-    // if(!isRunning) {
-    //   call buffTimer.startPeriodic(600 + (uint16_t)(call Random.rand16()%600));
-    // }
+    // signal buffTimer.fired();
+    isRunning = call buffTimer.isRunning();
+    if (!isRunning) {
+      call buffTimer.startPeriodic(600 + (uint16_t)(call Random.rand16()%600));
+    } 
     for(i = 0; i < bufflen; i++) {
-       (uint8_t*) sock.sendBuff[i] = buff;
+      (uint8_t*)sock.sendBuff[i] = buff;
     }
    
   }

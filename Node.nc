@@ -58,9 +58,8 @@ implementation{
    uint8_t lastByteWritten;
    bool SERVER;
    uint8_t newEstaCheck;
-   uint8_t lastBitWritten;
-   uint8_t transferNum = 13;
-
+   uint16_t lastBitWritten;
+   uint8_t buffData;
    // Prototypes
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
@@ -110,9 +109,9 @@ implementation{
    }
 
    event void clientWrite.fired() {
-     /* dbg(TRANSPORT_CHANNEL, "client write fired\n"); */
+    //  /* dbg(TRANSPORT_CHANNEL, "client write fired\n"); */
      //if buffer is not empty and transfer is not done
-    //  lastBitWritten = call Transport.write(fd, (uint8_t*) transferNum, 15);
+    
    }
 
    event void stopWait.fired() {
@@ -415,7 +414,7 @@ implementation{
 
    event void CommandHandler.setTestClient(uint8_t dest, uint8_t srcPort, uint8_t destPort, uint8_t transfer){
      // to convert from uint16 to two uint8 use >> operator
-     socket_t sock;
+    //  socket_store_t sock;
      uint8_t buffer[transfer]; 
      uint8_t i;
      bool bindCheck;
@@ -449,11 +448,26 @@ implementation{
      } else {
        dbg(TRANSPORT_CHANNEL, "binding failed\n");
      }
-    for (i = 0; i < 15; i++) {
-      buffer[i] = transfer;
-    }
+  
     call clientWrite.startPeriodic(INTERVAL_TIME*4 + (uint16_t) (call Random.rand16()%200));
-    lastBitWritten = call Transport.write(fd, transfer, 15);
+
+    // lastBitWritten = call Transport.write(fd, (uint8_t*) transfer, (uint16_t) 15);
+    // dbg(TRANSPORT_CHANNEL, "the last bit written is %d\n", lastBitWritten);
+
+
+    // for (i = 0; i < transfer; i++) {
+    //   buffer[i] = call Transport.write(fd, (uint8_t *) transfer, 15);
+    //   dbg(TRANSPORT_CHANNEL, "buffer includes %d\n", buffer[i]);
+    // }
+    lastBitWritten = call Transport.write(fd, (uint8_t*) transfer, sizeof(buffer));
+
+  // First initialize the buffer which will be a global variable 
+  // from there we would call the clientWrite timer 
+  // after calling the timer we would then call transport.write
+  // from there transport.write will give us number of how much is left
+  // Then we would take that number and put it in a new buffer and truncate it 
+  // from whatever is left in the new buffer we would then put that back in the old buffer
+
 
     // transfer number 17 //global var
     // uint8_t * buff[transfer] // in this method
