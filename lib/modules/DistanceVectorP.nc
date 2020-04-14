@@ -57,7 +57,7 @@ implementation{
         neighborSize = call NeighborHandler.getSize();
 
 
-        /* if(currentSize == 0) { */
+        if(currentSize == 0) {
           for(i = 0; i < neighborSize; i++) {
             routingTable[i].dest = neighborIDs[i];
             routingTable[i].nextHop = neighborIDs[i];
@@ -68,7 +68,7 @@ implementation{
 
             currentSize += 1;
           }
-        /* } else {
+        } else {
           //find the neighbors and update them
           for(i = 0; i < currentSize; i++) {
             uint8_t j;
@@ -83,7 +83,7 @@ implementation{
             }
 
           }
-        } */
+        }
         return;
     }
 

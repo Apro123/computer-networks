@@ -85,7 +85,7 @@ implementation{
        fd_temp = call acceptedSockets.get(i);
        buffSize = call Transport.read(fd_temp, buff, SOCKET_BUFFER_SIZE);
 
-       dbg(TRANSPORT_CHANNEL, "buff size: %d\n", buffSize);
+       /* dbg(TRANSPORT_CHANNEL, "buff size: %d\n", buffSize); */
 
 
        if(buffSize > 0) {
@@ -137,15 +137,15 @@ implementation{
     uint8_t done = 0;
 
     for(i = 0; i < numSockets; i++) {
-      dbg(TRANSPORT_CHANNEL, "client write fired. numSockets: %d, transfered[i]+1: %d, transfer[i]: %d\n", numSockets, transfered[i]+1, transfer[i]);
+      /* dbg(TRANSPORT_CHANNEL, "client write fired. numSockets: %d, transfered[i]+1: %d, transfer[i]: %d\n", numSockets, transfered[i]+1, transfer[i]); */
 
       if(transfered[i]+1 != transfer[i]) {
         // there is data to be written
         socket_t tempfd = call acceptedSockets.get(i);
         uint16_t dataWritten;
-        uint8_t tempBuff[transfer[i]];
+        uint8_t tempBuff[transfer[i]*2];
         uint16_t j;
-        uint8_t counter=0;
+        uint16_t counter=0;
 
         for(j = transfered[i]+1; j <= transfer[i]; j++) {
           uint16_t tempNum = j;
@@ -155,12 +155,9 @@ implementation{
           counter += 1;
         }
 
-        /* for(j = 0; j < counter; j++ ) {
-          dbg(TRANSPORT_CHANNEL, "data: %hhu, data: %hhu\n", tempBuff[j*2], tempBuff[(j*2)+1]);
-        } */
-
         dataWritten = call Transport.write(tempfd, tempBuff, counter*2);
-        /* dataWritten = 15; */
+
+        /* dbg(TRANSPORT_CHANNEL, "data written: %d\n", dataWritten); */
 
         transfered[i] += (dataWritten/2)-1;
       } else {
@@ -170,7 +167,7 @@ implementation{
     }
 
     if(done == numSockets) {
-      dbg(TRANSPORT_CHANNEL, "done Writing data\n");
+      /* dbg(TRANSPORT_CHANNEL, "done Writing data\n"); */
       call clientWrite.stop();
     }
 
@@ -187,7 +184,7 @@ implementation{
        if(cont) {
          newfdsize -= 1;
          if(SERVER) {
-             dbg(TRANSPORT_CHANNEL, "reading data now\n");
+             /* dbg(TRANSPORT_CHANNEL, "reading data now\n"); */
              call printSocketInfo.startPeriodic(INTERVAL_TIME*4 + (uint16_t) (call Random.rand16()%200));
            } else {
              call clientWrite.startPeriodic(INTERVAL_TIME*4 + (uint16_t) (call Random.rand16()%200));

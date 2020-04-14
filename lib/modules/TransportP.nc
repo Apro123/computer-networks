@@ -53,13 +53,37 @@ implementation {
       uint8_t size=0;
       uint16_t nextHop;
 
-      dbg(TRANSPORT_CHANNEL, "last written: %hhu, last sent: %hhu \n", sock.lastWritten, sock.lastSent);
+      /* dbg(TRANSPORT_CHANNEL, "last written: %hhu, last sent: %hhu \n", sock.lastWritten, sock.lastSent); */
 
       if(sock.lastWritten != sock.lastSent) { //new data
+        if(sock.lastSent == 128) {
+          sock.lastSent = 0;
+        }
         if(sock.lastWritten < sock.lastSent) {
-          if(SOCKET_BUFFER_SIZE - sock.lastSent+1 <= 12) {
-            uint8_t tstore[SOCKET_BUFFER_SIZE - sock.lastSent+1];
-            size = SOCKET_BUFFER_SIZE - sock.lastSent+1;
+          /* if(sock.lastSent == 127) {
+            //wrap around
+            sock.lastSent = 0;
+            if(sock.lastWritten - sock.lastSent > 12) {
+              uint8_t tstore[12];
+              size = 12;
+              store = tstore;
+              for(j = 0; j < size; j++) {
+                store[j] = sock.sendBuff[sock.lastSent];
+                sock.lastSent += 1;
+              }
+            } else {
+              uint8_t tstore[sock.lastWritten - sock.lastSent];
+              size = sock.lastWritten - sock.lastSent;
+              store = tstore;
+              for(j = 0; j < size; j++) {
+                store[j] = sock.sendBuff[sock.lastSent];
+                sock.lastSent += 1;
+              }
+            }
+          } else  */
+          if(SOCKET_BUFFER_SIZE - sock.lastSent <= 12) {
+            uint8_t tstore[SOCKET_BUFFER_SIZE - sock.lastSent];
+            size = SOCKET_BUFFER_SIZE - sock.lastSent;
             store = tstore;
             for(j = 0; j < size; j++) {
               store[j] = sock.sendBuff[sock.lastSent];
@@ -93,12 +117,28 @@ implementation {
             }
           }
         }
+        /* if(size % 2 == 1) {
+          size -= 1;
+          if(store[0] == 0) {
+            uint8_t tstore[size];
+            for(j = 0; j < size; j++) {
+              tstore[j] = store[j];
+            }
+            store = tstore;
+          } else {
+            uint8_t tstore[size];
+            for(j = 1; j <= size; j++) {
+              tstore[j-1] = store[j];
+            }
+            store = tstore;
+          }
+        } */
 
         tempPack.dest = sock.dest.addr;
         tempPack.src = TOS_NODE_ID;
         //amount of data to send
         tempPack.TTL = size; // sending data
-        dbg(TRANSPORT_CHANNEL, "amount of data %d\n", size);
+        /* dbg(TRANSPORT_CHANNEL, "amount of data %d\n", size); */
         tempPack.seq = randomSeq;
         tempPack.protocol = 4; // TCP protocol
 
@@ -110,6 +150,12 @@ implementation {
         tcpTemp.advertisedWindow = 0;
 
         sockSeq[i] += 1;
+
+        /* for(j = 0; j < size; j++) {
+          dbg(TRANSPORT_CHANNEL, "data: %d\n", store[j]);
+        }
+        dbg(TRANSPORT_CHANNEL, "------\n"); */
+
 
         memcpy(&(tcpTemp.data), store, TCP_PACKET_MAX_PAYLOAD_SIZE);
         memcpy(&(tempPack.payload), &tcpTemp, PACKET_MAX_PAYLOAD_SIZE);
@@ -297,7 +343,7 @@ implementation {
     if(temp.state == SYN_RCVD || temp.state == SYN_SENT) { //server || client
       temp.state = ESTABLISHED;
       numConnections += 1;
-      dbg(TRANSPORT_CHANNEL, "socket state changed to ESTABLISHED\n");
+      /* dbg(TRANSPORT_CHANNEL, "socket state changed to ESTABLISHED\n"); */
       call sockets.set(fd, temp);
       call newEstaSock.pushback(fd);
       return fd;
@@ -332,21 +378,20 @@ implementation {
     socket_store_t sock = call sockets.get(fd);
     uint16_t i;
 
-    dbg(TRANSPORT_CHANNEL, "in transport write. bufflen: %d\n", bufflen);
+    /* dbg(TRANSPORT_CHANNEL, "in transport write. bufflen: %d\n", bufflen); */
 
     for(i = 1; i <= bufflen; i++) {
-
-      sock.sendBuff[sock.lastWritten] = buff[i-1];
-      /* dbg(TRANSPORT_CHANNEL, "sock index: %hhu, value: %hhu\n", sock.lastWritten, buff[i-1]); */
-      sock.lastWritten += 1;
-
       if(sock.lastWritten == 128 && sock.lastAck != 0) {
         //wrap around
         sock.lastWritten = 0;
       }
+      sock.sendBuff[sock.lastWritten] = buff[i-1];
+      /* dbg(TRANSPORT_CHANNEL, "writing data %d at index: %d\n", sock.sendBuff[sock.lastWritten], sock.lastWritten); */
+      sock.lastWritten += 1;
+
 
       if((sock.lastWritten == 128 && sock.lastAck == 0) || sock.lastWritten + 1 == sock.lastAck) {
-        dbg(TRANSPORT_CHANNEL, "too much data in socket breaking now\n");
+        /* dbg(TRANSPORT_CHANNEL, "too much data in socket breaking now\n"); */
         break;
       }
     }
@@ -480,7 +525,7 @@ implementation {
         uint16_t nextHop;
 
         sock.state = ESTABLISHED; ///client connection established, call the client write timer periodically here
-        dbg(TRANSPORT_CHANNEL, "client socket state changed to ESTABLISHED\n");
+        /* dbg(TRANSPORT_CHANNEL, "client socket state changed to ESTABLISHED\n"); */
         call sockets.set(fd, sock);
 
         //send ack packet to server
@@ -576,7 +621,7 @@ implementation {
       uint8_t dataSize = package->TTL;
       uint8_t ack = 128;
 
-      dbg(TRANSPORT_CHANNEL, "in recieve data. size: %d\n", dataSize);
+      /* dbg(TRANSPORT_CHANNEL, "in recieve data. size: %d\n", dataSize); */
 
       //writing into recieved buffer
       for(i = 0; i < dataSize; i++) {
