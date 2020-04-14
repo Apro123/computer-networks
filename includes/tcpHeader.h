@@ -25,7 +25,8 @@ enum tcpFlag {
   DATA=9, //data
   SYN_ACK=10, //ack of the syn
   FIN_ACK=11,
-  FIN_ACK2=12
+  FIN_ACK2=12,
+	DATA_ACK=13
 };
 
 typedef nx_struct tcpHeader{

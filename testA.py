@@ -25,12 +25,12 @@ def main():
 
     destPort = 235
 
-    s.runTime(300);
+    s.runTime(150);
     s.testServer(2, destPort);
     s.runTime(60);
-    s.testClient(4, 2, 20, destPort, 15);
-    s.runTime(200);
-    s.closeClient(4, 2, 20, destPort);
+    s.testClient(3, 2, 20, destPort, 15);
+    s.runTime(300);
+    s.closeClient(3, 2, 20, destPort);
     s.runTime(100);
 
     # s.runTime(300);

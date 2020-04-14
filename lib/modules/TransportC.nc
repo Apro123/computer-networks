@@ -27,9 +27,6 @@ implementation {
   TransportP.sockets -> sockets;
   //key is socket_t and value is socket_store_t
 
-  components new TimerMilliC() as Timer1;
-  TransportP.socketTimer -> Timer1;
-
   components RandomC as Random;
   TransportP.Random -> Random;
 

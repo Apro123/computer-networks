@@ -13,7 +13,6 @@ module TransportP {
   uses interface List<socket_t> as newEstaSock; //fd can be 0-9
   uses interface List<socket_store_t> as sockets;
 
-  uses interface Timer<TMilli> as socketTimer;
   uses interface Random as Random;
 
   uses interface DistanceVector;
@@ -30,12 +29,9 @@ implementation {
   uint16_t sockSeq[MAX_NUM_OF_SOCKETS]; //sockets
   uint16_t randomSeq = 0;
   pack packTempSA;
-  pack bufferPack;
+  /* pack bufferPack; */
   socket_t toClose = MAX_NUM_OF_SOCKETS;
-
-  event void socketTimer.fired() {
-    dbg(TRANSPORT_CHANNEL, "timer in transportP fired\n");
-  }
+  uint8_t numConnections = 0; //used in server side
 
   event void closeTimer.fired() {
     socket_store_t temp = call sockets.get(toClose);
@@ -45,7 +41,98 @@ implementation {
   }
 
   event void buffTimer.fired() {
-     
+    uint8_t i;
+    uint8_t done = 0;
+
+    for(i = 0; i < call sockets.size(); i++) {
+      pack tempPack;
+      tcpHeader tcpTemp;
+      socket_store_t sock = call sockets.get(i);
+      uint8_t* store;
+      uint8_t j;
+      uint8_t size=0;
+      uint16_t nextHop;
+
+      dbg(TRANSPORT_CHANNEL, "last written: %hhu, last sent: %hhu \n", sock.lastWritten, sock.lastSent);
+
+      if(sock.lastWritten != sock.lastSent) { //new data
+        if(sock.lastWritten < sock.lastSent) {
+          if(SOCKET_BUFFER_SIZE - sock.lastSent+1 <= 12) {
+            uint8_t tstore[SOCKET_BUFFER_SIZE - sock.lastSent+1];
+            size = SOCKET_BUFFER_SIZE - sock.lastSent+1;
+            store = tstore;
+            for(j = 0; j < size; j++) {
+              store[j] = sock.sendBuff[sock.lastSent];
+              sock.lastSent += 1;
+            }
+          } else {
+            uint8_t tstore[12];
+            size = 12;
+            store = tstore;
+            for(j = 0; j < size; j++) {
+              store[j] = sock.sendBuff[sock.lastSent];
+              sock.lastSent += 1;
+            }
+          }
+        } else {
+          if(sock.lastWritten - sock.lastSent > 12) {
+            uint8_t tstore[12];
+            size = 12;
+            store = tstore;
+            for(j = 0; j < size; j++) {
+              store[j] = sock.sendBuff[sock.lastSent];
+              sock.lastSent += 1;
+            }
+          } else {
+            uint8_t tstore[sock.lastWritten - sock.lastSent];
+            size = sock.lastWritten - sock.lastSent;
+            store = tstore;
+            for(j = 0; j < size; j++) {
+              store[j] = sock.sendBuff[sock.lastSent];
+              sock.lastSent += 1;
+            }
+          }
+        }
+
+        tempPack.dest = sock.dest.addr;
+        tempPack.src = TOS_NODE_ID;
+        //amount of data to send
+        tempPack.TTL = size; // sending data
+        dbg(TRANSPORT_CHANNEL, "amount of data %d\n", size);
+        tempPack.seq = randomSeq;
+        tempPack.protocol = 4; // TCP protocol
+
+        tcpTemp.destPort = sock.dest.port;
+        tcpTemp.srcPort = sock.src;
+        tcpTemp.seq = sockSeq[i];
+        tcpTemp.ack = sock.lastAck;
+        tcpTemp.flag = DATA;
+        tcpTemp.advertisedWindow = 0;
+
+        sockSeq[i] += 1;
+
+        memcpy(&(tcpTemp.data), store, TCP_PACKET_MAX_PAYLOAD_SIZE);
+        memcpy(&(tempPack.payload), &tcpTemp, PACKET_MAX_PAYLOAD_SIZE);
+
+        call sockets.set(i, sock);
+
+        nextHop = call DistanceVector.getNextHop(tempPack);
+        if(nextHop == 256) {
+          dbg(TRANSPORT_CHANNEL, "buff timer infinite cost or node not in table Node: %d\n", tempPack.dest);
+          call FloodingHandler.flood(tempPack);
+        } else {
+          call Sender.send(tempPack, nextHop);
+        }
+      } else {
+        done += 1;
+      }
+
+    }
+
+    if(done == call sockets.size()) {
+      call buffTimer.stop();
+    }
+
   }
 
   command bool Transport.isEstablished(socket_t t) {
@@ -80,7 +167,7 @@ implementation {
 
     nextHop = call DistanceVector.getNextHop(packTempSA);
     if(nextHop == 256) {
-      dbg(TRANSPORT_CHANNEL, "infinite cost or node not in table \n");
+      dbg(TRANSPORT_CHANNEL, "fire syn ack again infinite cost or node not in table \n");
       call FloodingHandler.flood(packTempSA);
     } else {
       call Sender.send(packTempSA, nextHop);
@@ -115,16 +202,16 @@ implementation {
       tcpTempSA.ack = prev->seq + 1;
       tcpTempSA.flag = SYN_ACK;
       tcpTempSA.advertisedWindow = 0;
-      memcpy(&(tcpTempSA.data), &(prev->data), sizeof(TCP_PACKET_MAX_PAYLOAD_SIZE)); //random data
+      memcpy(&(tcpTempSA.data), &(prev->data), TCP_PACKET_MAX_PAYLOAD_SIZE); //random data
       /* tcpTempSA.data = prev.data; //random data */
 
-      memcpy(packTempSA.payload, &tcpTempSA, sizeof(TCP_PACKET_HEADER_LENGTH));
+      memcpy(packTempSA.payload, &tcpTempSA, PACKET_MAX_PAYLOAD_SIZE);
 
-      dbg(TRANSPORT_CHANNEL, "sending SYN_ACK tcp flag = %d\n", tcpTempSA.flag);
+      dbg(TRANSPORT_CHANNEL, "sending SYN_ACK tcp flag = %d to Node %d\n", tcpTempSA.flag, packTempSA.dest);
 
       nextHop = call DistanceVector.getNextHop(packTempSA);
       if(nextHop == 256) {
-        dbg(TRANSPORT_CHANNEL, "infinite cost or node not in table \n");
+        dbg(TRANSPORT_CHANNEL, "fire syn ack infinite cost or node not in table \n");
         call FloodingHandler.flood(packTempSA);
       } else {
         call Sender.send(packTempSA, nextHop);
@@ -209,6 +296,7 @@ implementation {
     socket_store_t temp = call sockets.get(fd);
     if(temp.state == SYN_RCVD || temp.state == SYN_SENT) { //server || client
       temp.state = ESTABLISHED;
+      numConnections += 1;
       dbg(TRANSPORT_CHANNEL, "socket state changed to ESTABLISHED\n");
       call sockets.set(fd, temp);
       call newEstaSock.pushback(fd);
@@ -241,12 +329,40 @@ implementation {
     //turn the uint16 into two unint 8 in node.nc file in the clientWrite timer.fired()
     //make a new timer here and call that periodically starting when the connection is ESTABLISHED
     bool isRunning;
-    tcpHeader tcpPack;
     socket_store_t sock = call sockets.get(fd);
-    // bool isRunning;
-    uint8_t i;
+    uint16_t i;
 
-    bufferPack.dest = tcpPack.destPort;
+    dbg(TRANSPORT_CHANNEL, "in transport write. bufflen: %d\n", bufflen);
+
+    for(i = 1; i <= bufflen; i++) {
+
+      sock.sendBuff[sock.lastWritten] = buff[i-1];
+      /* dbg(TRANSPORT_CHANNEL, "sock index: %hhu, value: %hhu\n", sock.lastWritten, buff[i-1]); */
+      sock.lastWritten += 1;
+
+      if(sock.lastWritten == 128 && sock.lastAck != 0) {
+        //wrap around
+        sock.lastWritten = 0;
+      }
+
+      if((sock.lastWritten == 128 && sock.lastAck == 0) || sock.lastWritten + 1 == sock.lastAck) {
+        dbg(TRANSPORT_CHANNEL, "too much data in socket breaking now\n");
+        break;
+      }
+    }
+
+    call sockets.set(fd, sock);
+
+
+    isRunning = call buffTimer.isRunning();
+    if (!isRunning) {
+      call buffTimer.startPeriodic(1000 + (uint16_t)(call Random.rand16()%500));
+    }
+
+
+    return i;
+
+    /* bufferPack.dest = tcpPack.destPort;
     bufferPack.src = TOS_NODE_ID;
     bufferPack.seq = randomSeq;
     bufferPack.TTL = bufflen; // sending data
@@ -257,20 +373,14 @@ implementation {
     tcpPack.seq = sockSeq[fd];
     tcpPack.ack = bufflen;
     tcpPack.flag = ACK;
-    tcpPack.advertisedWindow = bufflen;
+    tcpPack.advertisedWindow = bufflen; */
 
     //  memcpy(tcpPack.data, buff, bufflen);
-    
 
-    // signal buffTimer.fired();
-    isRunning = call buffTimer.isRunning();
-    if (!isRunning) {
-      call buffTimer.startPeriodic(600 + (uint16_t)(call Random.rand16()%600));
-    } 
-    for(i = 0; i < bufflen; i++) {
+    /* for(i = 0; i < bufflen; i++) {
       (uint8_t*)sock.sendBuff[i] = buff;
-    }
-   
+    } */
+
   }
 
   /**
@@ -279,7 +389,7 @@ implementation {
    *    pack *package: the TCP packet that you are handling.
    * @Side Client/Server
    * @return uint8_t - return 0 for fail with errors, return 1 for regular
-   success, return 2 for new connection (when received ACK), return 3 for syn flag recieved (server only)
+   success, return 2 for new connection (when received ACK) for client, return 3 for ack flag recieved (server only)
 
    */
   command uint8_t Transport.receive(pack* package) {
@@ -292,11 +402,11 @@ implementation {
     if(package->dest != TOS_NODE_ID) {
       uint16_t nextHop;
 
-      /* dbg(TRANSPORT_CHANNEL, "dest not this node\n"); */
+      dbg(TRANSPORT_CHANNEL, "dest is %d, flag is %d\n", package->dest, t->flag);
 
       nextHop = call DistanceVector.getNextHop(*package);
       if(nextHop == 256) {
-        dbg(TRANSPORT_CHANNEL, "infinite cost or node not in table \n");
+        dbg(TRANSPORT_CHANNEL, "recieve infinite cost or node not in table \n");
         call FloodingHandler.flood(*package);
       } else {
         call Sender.send(*package, nextHop);
@@ -320,41 +430,93 @@ implementation {
       return 0;
     }
 
-    dbg(TRANSPORT_CHANNEL, "tcp header flag %d\n", t->flag);
+    /* dbg(TRANSPORT_CHANNEL, "tcp header flag %d\n", t->flag); */
 
 
     if(t->flag == ACK) {
       //server
+
       socket_t acceptCheck;
       acceptCheck = call Transport.accept(fd);
       if(acceptCheck != MAX_NUM_OF_SOCKETS) { //illegal
-        return 2;
+        return 3;
       } else {
         dbg(TRANSPORT_CHANNEL, "not accepted\n");
         return 0;
       }
     } else if(t->flag == SYN) {
       //server
+
+      sock.lastRead = 0;
+      sock.lastRcvd = 0;
+      sock.nextExpected = 0;
+
       if(sock.state == LISTEN) {
+
         sock.state = SYN_RCVD;
         dbg(TRANSPORT_CHANNEL, "socket state changed to SYN_RCVD\n");
         sock.dest.addr = package->src;
         sock.dest.port = t->srcPort;
+        sock.src = t->destPort;
         call sockets.set(fd, sock);
-        //send ack packet
+
         fireSynAck(fd, package);
-        return 3;
+
+        return 1;
       } else {
         dbg(TRANSPORT_CHANNEL, "state was not at Listen\n");
         return 0;
       }
     } else if(t-> flag == SYN_ACK) {
       //client
+
+      sock.lastWritten = 0;
+      sock.lastAck = 0;
+      sock.lastSent = 0;
+
       if(sock.state == SYN_SENT) {
+        pack tempPack;
+        tcpHeader tcpTemp;
+        uint16_t nextHop;
+
         sock.state = ESTABLISHED; ///client connection established, call the client write timer periodically here
-        dbg(TRANSPORT_CHANNEL, "socket state changed to ESTABLISHED\n");
+        dbg(TRANSPORT_CHANNEL, "client socket state changed to ESTABLISHED\n");
         call sockets.set(fd, sock);
-        return 2; //check if server or client is done in node file;
+
+        //send ack packet to server
+
+        tempPack.dest = sock.dest.addr;
+        tempPack.src = TOS_NODE_ID;
+        tempPack.seq = randomSeq;
+        tempPack.TTL = 0;
+        tempPack.protocol = 4;
+
+        tcpTemp.srcPort = sock.src;
+        tcpTemp.destPort = sock.dest.port;
+
+        if(!sockSeq[fd]) {
+          sockSeq[fd] = 1;
+        }
+
+        tcpTemp.seq = sockSeq[fd];
+        tcpTemp.ack = 0;
+        tcpTemp.flag = ACK;
+        tcpTemp.advertisedWindow = 0;
+
+        memcpy(&(tempPack.payload), &tcpTemp, PACKET_MAX_PAYLOAD_SIZE);
+
+        sockSeq[fd] = sockSeq[fd] + 1;
+        randomSeq = randomSeq + 1;
+
+        nextHop = call DistanceVector.getNextHop(tempPack);
+        if(nextHop == 256) {
+          dbg(TRANSPORT_CHANNEL, "ack infinite cost or node not in table \n");
+          call FloodingHandler.flood(tempPack);
+        } else {
+          call Sender.send(tempPack, nextHop);
+        }
+
+        return 2;
       } else {
         dbg(TRANSPORT_CHANNEL, "state was not at SYN_SENT\n");
         return 0;
@@ -389,11 +551,11 @@ implementation {
       tcpTemp.advertisedWindow = 0;
       /* memcpy(tcpTemp.data, addr, TCP_PACKET_MAX_PAYLOAD_SIZE); //addr is a placeholder for now */
 
-      memcpy(packTemp.payload, &tcpTemp, PACKET_MAX_PAYLOAD_SIZE);
+      memcpy(&(packTemp.payload), &tcpTemp, PACKET_MAX_PAYLOAD_SIZE);
 
       nextHop = call DistanceVector.getNextHop(packTemp);
       if(nextHop == 256) {
-        dbg(TRANSPORT_CHANNEL, "infinite cost or node not in table \n");
+        dbg(TRANSPORT_CHANNEL, "fin ack infinite cost or node not in table \n");
         call FloodingHandler.flood(packTemp);
       } else {
         call Sender.send(packTemp, nextHop);
@@ -406,6 +568,84 @@ implementation {
     } else if(t->flag == FIN_ACK2) {
       toClose = fd;
       call closeTimer.startOneShot(1500 + (uint16_t) (call Random.rand16()%200));
+    } else if(t->flag == DATA) {
+      //server
+      pack packTemp;
+      tcpHeader tcpTemp;
+      uint16_t nextHop;
+      uint8_t dataSize = package->TTL;
+      uint8_t ack = 128;
+
+      dbg(TRANSPORT_CHANNEL, "in recieve data. size: %d\n", dataSize);
+
+      //writing into recieved buffer
+      for(i = 0; i < dataSize; i++) {
+        /* dbg(TRANSPORT_CHANNEL, "t->data[i]: %d\n", t->data[i]); */
+        sock.rcvdBuff[sock.lastRcvd] = t->data[i];
+        ack = sock.lastRcvd;
+        sock.lastRcvd += 1;
+
+        if(sock.lastRcvd == 128 && sock.lastRead != 0) {
+          //wrap around
+          sock.lastRcvd = 0;
+        }
+        if(sock.lastRcvd == 128 && sock.lastRead == 0) {
+          dbg(TRANSPORT_CHANNEL, "too much data in read socket breaking now\n");
+          break;
+        }
+      }
+
+      if(ack == 128) {
+        dbg(TRANSPORT_CHANNEL, "why is ack at 128\n");
+        return 0;
+      }
+
+      /* dbg(TRANSPORT_CHANNEL, "done reading\n"); */
+      //send data ack packet
+      packTemp.dest = sock.dest.addr;
+      packTemp.src = TOS_NODE_ID;
+      packTemp.seq = randomSeq; //random
+      packTemp.TTL = 0; //no data to store
+      packTemp.protocol = 4; //tcp Header
+
+      tcpTemp.srcPort = sock.src;
+      tcpTemp.destPort = sock.dest.port;
+      tcpTemp.seq = sockSeq[fd];
+      tcpTemp.ack = ack;
+      tcpTemp.flag = DATA_ACK;
+
+      //send with advertisedWindow as num of socket space left
+      tcpTemp.advertisedWindow = 0;
+      if(sock.lastRcvd < sock.lastRead) {
+        tcpTemp.advertisedWindow = sock.lastRcvd + (SOCKET_BUFFER_SIZE-sock.lastRead-1);
+      } else {
+        tcpTemp.advertisedWindow = sock.lastRcvd - sock.lastRead;
+      }
+
+
+      //congestion control
+      tcpTemp.advertisedWindow = tcpTemp.advertisedWindow/numConnections;
+
+      memcpy(&(packTemp.payload), &(tcpTemp), PACKET_MAX_PAYLOAD_SIZE);
+
+      sockSeq[fd] = sockSeq[fd] + 1;
+      randomSeq = randomSeq + 1;
+
+      call sockets.set(fd, sock);
+
+      nextHop = call DistanceVector.getNextHop(packTemp);
+      if(nextHop == 256) {
+        dbg(TRANSPORT_CHANNEL, "recd data flag infinite cost or node not in table \n");
+        call FloodingHandler.flood(packTemp);
+      } else {
+        call Sender.send(packTemp, nextHop);
+      }
+
+    } else if(t->flag == DATA_ACK) {
+      //client
+      //put advertised window into effective window maybe later
+      sock.lastAck = t->ack;
+      call sockets.set(fd,sock);
     }
 
 
@@ -421,13 +661,31 @@ implementation {
    * @param
    *    uint8_t *buff: the buffer that is being written.
    * @param
-   *    uint16_t bufflen: the amount of data that can be written to the
+   *    uint16_t bufflen: the amount of data that can be read from the
    *       buffer.
    * @Side For your project, only server side. This could be both though.
    * @return uint16_t - return the amount of data you are able to read
    *    from the pass buffer. This may be shorter then bufflen
    */
-  command uint16_t Transport.read(socket_t fd, uint8_t *buff, uint16_t bufflen) {
+  command uint8_t Transport.read(socket_t fd, uint8_t *buff, uint16_t bufflen) {
+    socket_store_t sock = call sockets.get(fd);
+    uint8_t read = 0;
+
+    /* dbg(TRANSPORT_CHANNEL, "read function. last read: %d, last rcvd: %d\n", sock.lastRead, sock.lastRcvd); */
+
+    while(sock.lastRead != sock.lastRcvd) {
+      buff[read] = sock.rcvdBuff[sock.lastRead];
+      sock.lastRead += 1;
+      if(sock.lastRead == 128) {
+        sock.lastRead = 0;
+      }
+      read += 1;
+    }
+
+    call sockets.set(fd, sock);
+
+
+    return read;
     // uint8_t read = 0;
     // uint8_t sizeRead;
     // uint8_t next;
@@ -491,7 +749,7 @@ implementation {
 
     nextHop = call DistanceVector.getNextHop(packTemp);
     if(nextHop == 256) {
-      dbg(TRANSPORT_CHANNEL, "infinite cost or node not in table \n");
+      dbg(TRANSPORT_CHANNEL, "connect infinite cost or node not in table \n");
       call FloodingHandler.flood(packTemp);
     } else {
       call Sender.send(packTemp, nextHop);
@@ -501,7 +759,7 @@ implementation {
     randomSeq = randomSeq + 1;
 
     return SUCCESS;
-  } ////////////////////////////////////////////////////finished connect. finish up client to server connection. (finished sending syn packet) deal with that in the server
+  }
 
   /**
    * Closes the socket.
@@ -547,7 +805,7 @@ implementation {
 
     nextHop = call DistanceVector.getNextHop(packTemp);
     if(nextHop == 256) {
-      dbg(TRANSPORT_CHANNEL, "infinite cost or node not in table \n");
+      dbg(TRANSPORT_CHANNEL, "close infinite cost or node not in table \n");
       call FloodingHandler.flood(packTemp);
     } else {
       call Sender.send(packTemp, nextHop);

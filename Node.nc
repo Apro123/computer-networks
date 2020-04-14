@@ -40,10 +40,11 @@ module Node{
 
    uses interface Transport;
 
-   uses interface List<socket_t> as acceptedSockets;
-   uses interface Timer<TMilli> as printSocketInfo;
-   uses interface Timer<TMilli> as clientWrite;
-   uses interface Timer<TMilli> as stopWait;
+   uses interface List<socket_t> as acceptedSockets; //both
+   uses interface Timer<TMilli> as stopWait; //both
+
+   uses interface Timer<TMilli> as printSocketInfo; //read data from socket server
+   uses interface Timer<TMilli> as clientWrite; //wrtie data into socket client
 }
 
 implementation{
@@ -51,78 +52,147 @@ implementation{
    uint16_t sequence = 0; //sequence automatically resets to 0
    uint8_t TIMES_TO_SEND_PACKET = 3;
    uint32_t INTERVAL_TIME = 2500; // This is an arbitiary number. It is also the same number as the timers in FloodingHandlerP so if you all of the timers should start periodically a the same interval
-   socket_t fd;
-   socket_addr_t sockAddr;
-   socket_addr_t serAddrFromC;
-   uint8_t bToTransfer; //0 to transfer
-   uint8_t lastByteWritten;
+   socket_t fd[MAX_NUM_OF_SOCKETS]; //used by both to establish connection
+   uint8_t newfdsize = 0; //both
+   /* uint8_t bToTransfer; //0 to transfer */
+   /* uint8_t lastByteWritten; */
    bool SERVER;
-   uint8_t newEstaCheck;
-   uint16_t lastBitWritten;
-   uint8_t buffData;
+   uint16_t transfer[MAX_NUM_OF_SOCKETS]; //client
+   uint16_t transfered[MAX_NUM_OF_SOCKETS]; //client
+   socket_addr_t serAddrFromC[MAX_NUM_OF_SOCKETS];//client
+   uint8_t numSockets = 0; //client
+
+   /* uint8_t* buffData; //client */
+
+   /* uint16_t lastBitWritten;
+   uint8_t buffData; */
+
    // Prototypes
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
    event void printSocketInfo.fired() {
-     bool isRunning;
-     uint16_t i;
-     /* dbg(TRANSPORT_CHANNEL, "socket read info fired\n"); */
-     isRunning = call printSocketInfo.isRunning();
-     if(!isRunning) { //means new connection to accept
-       socket_t* newfd;
-       newfd = call Transport.getNewlyEstablished();
-       if(newfd != NULL) {
-         uint8_t j;
-         uint8_t size;
-         size = (uint8_t) newfd[0];
-         for(j=0; j < size; j++) {
-           dbg(TRANSPORT_CHANNEL, "adding socket_t : %d\n", newfd[j+1]);
-           call acceptedSockets.pushback(newfd[j+1]);
-         }
-         /* call acceptedSockets.pushback(newfd); */
-       }
-     }
-     return;
+     uint8_t i;
+     uint8_t done = 0;
+     /* dbg(TRANSPORT_CHANNEL, "socket read info fired. size: %d\n", call acceptedSockets.size()); */
+
      for(i = 0; i < call acceptedSockets.size(); i++) {
        socket_t fd_temp;
-       uint16_t buffSize;
-       uint8_t* buff;
-       uint16_t realdata[6];
+       uint8_t buffSize;
+       uint8_t buff[SOCKET_BUFFER_SIZE];
+       uint16_t realdata[6]; //6 uint16_t words
        uint8_t j = 0;
 
-       buff = (uint8_t*) 3654; //useless call to avoid compile warning
-
        fd_temp = call acceptedSockets.get(i);
-       buffSize = (uint8_t) call Transport.read(fd_temp, buff, 12); //6 uint16_t words
+       buffSize = call Transport.read(fd_temp, buff, SOCKET_BUFFER_SIZE);
+
+       dbg(TRANSPORT_CHANNEL, "buff size: %d\n", buffSize);
+
+
        if(buffSize > 0) {
+         uint8_t leftover = 0;
          for(j=0; j<buffSize/2; j++) {
-           /* if(buffSize <= j*2) {
-             realdata[j] = NULL;
-           } else { */
-          realdata[j] = ((uint16_t) buff[j*2]) | buff[j*2+1];
-           /* } */
+           realdata[leftover] = ((uint16_t) buff[j*2]<<8) + (uint16_t) buff[j*2+1];
+           leftover += 1;
+           if(leftover%6 == 0) {
+             dbg(TRANSPORT_CHANNEL, "Reading data: %hu,%hu,%hu,%hu,%hu,%hu\n", realdata[0], realdata[1], realdata[2], realdata[3], realdata[4], realdata[5]);
+             leftover = 0;
+           }
          }
-         dbg(TRANSPORT_CHANNEL, "Reading data: %d,%s,%s,%s,%s", realdata[0], realdata[1] ? ""+ realdata[1]: " ", realdata[2] ? ""+ realdata[2]: " ", realdata[3] ? ""+ realdata[3]: " ", realdata[4] ? ""+ realdata[4]: " ");
+         if(leftover > 0) {
+           if(leftover == 1) {
+             dbg(TRANSPORT_CHANNEL, "Reading data: %hu\n", realdata[0]);
+           } else if (leftover == 2) {
+             dbg(TRANSPORT_CHANNEL, "Reading data: %hu,%hu\n", realdata[0], realdata[1]);
+
+           } else if (leftover == 3) {
+             dbg(TRANSPORT_CHANNEL, "Reading data: %hu,%hu,%hu\n", realdata[0], realdata[1], realdata[2]);
+
+           } else if (leftover == 4) {
+             dbg(TRANSPORT_CHANNEL, "Reading data: %hu,%hu,%hu,%hu\n", realdata[0], realdata[1], realdata[2], realdata[3]);
+
+           } else if (leftover == 5) {
+             dbg(TRANSPORT_CHANNEL, "Reading data: %hu,%hu,%hu,%hu,%hu\n", realdata[0], realdata[1], realdata[2], realdata[3], realdata[4]);
+
+           } else {
+             dbg(TRANSPORT_CHANNEL, "wtf leftover: %hhu\n", leftover);
+           }
+
+         }
+
+       } else {
+         done += 1;
        }
 
+     }
+     if(done == call acceptedSockets.size()) {
+       call printSocketInfo.stop();
      }
    }
 
    event void clientWrite.fired() {
-    //  /* dbg(TRANSPORT_CHANNEL, "client write fired\n"); */
      //if buffer is not empty and transfer is not done
-    
+     // subtract transfer to keep track of data
+       //there is data to be written
+    uint8_t i;
+    uint8_t done = 0;
+
+    for(i = 0; i < numSockets; i++) {
+      dbg(TRANSPORT_CHANNEL, "client write fired. numSockets: %d, transfered[i]+1: %d, transfer[i]: %d\n", numSockets, transfered[i]+1, transfer[i]);
+
+      if(transfered[i]+1 != transfer[i]) {
+        // there is data to be written
+        socket_t tempfd = call acceptedSockets.get(i);
+        uint16_t dataWritten;
+        uint8_t tempBuff[transfer[i]];
+        uint16_t j;
+        uint8_t counter=0;
+
+        for(j = transfered[i]+1; j <= transfer[i]; j++) {
+          uint16_t tempNum = j;
+          tempBuff[counter*2] = (uint8_t)(j >> 8);
+          tempBuff[(counter*2)+1] = (uint8_t)(tempNum);
+          /* dbg(TRANSPORT_CHANNEL, "data: %hhu, data: %hhu\n", tempBuff[counter*2], tempBuff[(counter*2)+1]); */
+          counter += 1;
+        }
+
+        /* for(j = 0; j < counter; j++ ) {
+          dbg(TRANSPORT_CHANNEL, "data: %hhu, data: %hhu\n", tempBuff[j*2], tempBuff[(j*2)+1]);
+        } */
+
+        dataWritten = call Transport.write(tempfd, tempBuff, counter*2);
+        /* dataWritten = 15; */
+
+        transfered[i] += (dataWritten/2)-1;
+      } else {
+        /* dbg(TRANSPORT_CHANNEL, "done Writing data\n"); */
+        done += 1;
+      }
+    }
+
+    if(done == numSockets) {
+      dbg(TRANSPORT_CHANNEL, "done Writing data\n");
+      call clientWrite.stop();
+    }
+
+    /* dbg(TRANSPORT_CHANNEL, "client done\n"); */
+
    }
 
    event void stopWait.fired() {
      bool cont; //continue if connection is established
-     cont = call Transport.isEstablished(fd);
-     if(cont) {
-       if(SERVER) {
-         call printSocketInfo.startPeriodic(INTERVAL_TIME*4 + (uint16_t) (call Random.rand16()%200));
-       } else {
-         call clientWrite.startPeriodic(INTERVAL_TIME*4 + (uint16_t) (call Random.rand16()%200));
-       }
+     uint8_t i;
+     uint8_t temp = newfdsize;
+     for(i = 0; i < temp; i++) {
+       cont = call Transport.isEstablished(fd[i]);
+       if(cont) {
+         newfdsize -= 1;
+         if(SERVER) {
+             dbg(TRANSPORT_CHANNEL, "reading data now\n");
+             call printSocketInfo.startPeriodic(INTERVAL_TIME*4 + (uint16_t) (call Random.rand16()%200));
+           } else {
+             call clientWrite.startPeriodic(INTERVAL_TIME*4 + (uint16_t) (call Random.rand16()%200));
+           }
+         }
      }
    }
 
@@ -237,23 +307,39 @@ implementation{
 
          //tcp packet
          if(myMsg->protocol == 4) {
+           uint8_t newEstaCheck;
            //TTL used to store number of data "items" (uint16_t size words)
            newEstaCheck = call Transport.receive(myMsg);
            //check if new socket connection, then stop the timer and signal printSocketInfo timer.fired() event to accept the connection
-           if(newEstaCheck == 2) {
-             dbg(TRANSPORT_CHANNEL, "CONNECTION ESTABLISHED\n");
-             if(SERVER) {
-               call printSocketInfo.stop();
-               signal printSocketInfo.fired();
-             } else {
+           if(newEstaCheck == 2 || newEstaCheck == 3) {
+             socket_t* newfd;
+             if(newEstaCheck == 2) {
                //client
+               dbg(TRANSPORT_CHANNEL, "CLIENT CONNECTION ESTABLISHED\n");
                call stopWait.stop();
                call clientWrite.startPeriodic(INTERVAL_TIME*4 + (uint16_t) (call Random.rand16()%200));
+             } else {
+               //server
+               dbg(TRANSPORT_CHANNEL, "SERVER CONNECTION ESTABLISHED\n");
+               call stopWait.stop();
+               call printSocketInfo.stop();
+               call stopWait.startPeriodic(INTERVAL_TIME*3 + (uint16_t) (call Random.rand16()%200));
              }
-           } else if (newEstaCheck == 3) {
-             //server
-             call stopWait.stop();
-             call stopWait.startPeriodic(INTERVAL_TIME*3 + (uint16_t) (call Random.rand16()%200));
+             //add into accepted sockets
+             newfd = call Transport.getNewlyEstablished();
+             /* dbg(TRANSPORT_CHANNEL, "newfd\n"); */
+             if(newfd != NULL) {
+               uint8_t j;
+               uint8_t size;
+               size = (uint8_t) newfd[0];
+               /* dbg(TRANSPORT_CHANNEL, "newfd not null\n"); */
+               for(j=0; j < size; j++) {
+                 /* dbg(TRANSPORT_CHANNEL, "adding socket_t : %d\n", newfd[j+1]); */
+                 call acceptedSockets.pushback(newfd[j+1]);
+               }
+               /* call acceptedSockets.pushback(newfd); */
+             }
+
            }
            return msg;
          }
@@ -389,67 +475,84 @@ implementation{
    event void CommandHandler.printDistanceVector(){}
 
    event void CommandHandler.setTestServer(uint8_t port){
+     socket_addr_t sockAddr;
      bool bindCheck;
      dbg(TRANSPORT_CHANNEL, "Server Node %d\n", TOS_NODE_ID);
      dbg(TRANSPORT_CHANNEL, "Listening at port: %d\n", port);
 
-     fd = call Transport.socket();
-     if(fd == MAX_NUM_OF_SOCKETS) {
+     fd[newfdsize] = call Transport.socket();
+     if(fd[newfdsize] == MAX_NUM_OF_SOCKETS) {
        dbg(TRANSPORT_CHANNEL, "reached max num of sockets\n");
        return;
      }
+
      sockAddr.port = port;
      sockAddr.addr = TOS_NODE_ID;
 
-     bindCheck = call Transport.bind(fd, &sockAddr);
+     bindCheck = call Transport.bind(fd[newfdsize], &sockAddr);
      if(bindCheck == SUCCESS) {
        SERVER = TRUE;
        /* call stopWait.startPeriodic(INTERVAL_TIME*3 + (uint16_t) (call Random.rand16()%200)); */
        /* call printSocketInfo.startPeriodic(INTERVAL_TIME*4 + (uint16_t) (call Random.rand16()%200)); */
-       call Transport.listen(fd);
+       call Transport.listen(fd[newfdsize]);
+       newfdsize += 1;
+
      } else {
        dbg(TRANSPORT_CHANNEL, "binding failed\n");
      }
    }
 
-   event void CommandHandler.setTestClient(uint8_t dest, uint8_t srcPort, uint8_t destPort, uint8_t transfer){
+   event void CommandHandler.setTestClient(uint8_t dest, uint8_t srcPort, uint8_t destPort, uint8_t transferTop, uint8_t transferBottom){
      // to convert from uint16 to two uint8 use >> operator
-    //  socket_store_t sock;
-     uint8_t buffer[transfer]; 
-     uint8_t i;
+     //  socket_store_t sock;
+     socket_addr_t sockAddr;
+     uint16_t tempTransfer;
+     /* uint8_t i; */
      bool bindCheck;
+     tempTransfer = ((uint16_t) transferTop<<8) | transferBottom;
      dbg(TRANSPORT_CHANNEL, "Client Node %d\n", TOS_NODE_ID);
      dbg(TRANSPORT_CHANNEL, "dest: %d\n", dest);
      dbg(TRANSPORT_CHANNEL, "srcPort: %d\n", srcPort);
      dbg(TRANSPORT_CHANNEL, "destPort: %d\n", destPort);
-     dbg(TRANSPORT_CHANNEL, "bytes to transfer: %d\n", transfer);
+     dbg(TRANSPORT_CHANNEL, "bytes to transfer: %hu\n", tempTransfer);
 
-     fd = call Transport.socket();
-     if(fd == MAX_NUM_OF_SOCKETS) {
+     fd[newfdsize] = call Transport.socket();
+     if(fd[newfdsize] == MAX_NUM_OF_SOCKETS) {
        dbg(TRANSPORT_CHANNEL, "reached max num of sockets\n");
        return;
      }
      sockAddr.port = srcPort;
      sockAddr.addr = TOS_NODE_ID;
 
-     bindCheck = call Transport.bind(fd, &sockAddr);
+     bindCheck = call Transport.bind(fd[newfdsize], &sockAddr);
      if(bindCheck == SUCCESS) {
+       /* uint8_t tempBuff[transfer]; */
        SERVER = FALSE;
 
-       serAddrFromC.port = destPort;
-       serAddrFromC.addr = dest;
+       serAddrFromC[numSockets].port = destPort;
+       serAddrFromC[numSockets].addr = dest;
 
-       bToTransfer = transfer;
+       call Transport.connect(fd[newfdsize], &serAddrFromC[numSockets]);
 
-       call Transport.connect(fd, &serAddrFromC);
+       transfer[numSockets] = tempTransfer;
+       transfered[numSockets] = 0;
+
+       newfdsize += 1;
+       numSockets += 1;
 
        call stopWait.startPeriodic(INTERVAL_TIME*3 + (uint16_t) (call Random.rand16()%200)); //client side
        /* call clientWrite.startPeriodic(INTERVAL_TIME*4 + (uint16_t) (call Random.rand16()%200)); */
      } else {
        dbg(TRANSPORT_CHANNEL, "binding failed\n");
      }
-  
-    call clientWrite.startPeriodic(INTERVAL_TIME*4 + (uint16_t) (call Random.rand16()%200));
+
+
+
+     //buff data is initialized
+
+     //client write is called later
+
+    /* call clientWrite.startPeriodic(INTERVAL_TIME*8 + (uint16_t) (call Random.rand16()%200)); */
 
     // lastBitWritten = call Transport.write(fd, (uint8_t*) transfer, (uint16_t) 15);
     // dbg(TRANSPORT_CHANNEL, "the last bit written is %d\n", lastBitWritten);
@@ -459,14 +562,14 @@ implementation{
     //   buffer[i] = call Transport.write(fd, (uint8_t *) transfer, 15);
     //   dbg(TRANSPORT_CHANNEL, "buffer includes %d\n", buffer[i]);
     // }
-    lastBitWritten = call Transport.write(fd, (uint8_t*) transfer, sizeof(buffer));
+    /* lastBitWritten = call Transport.write(fd, (uint8_t*) transfer, sizeof(buffer)); */
 
-  // First initialize the buffer which will be a global variable 
-  // from there we would call the clientWrite timer 
-  // after calling the timer we would then call transport.write
-  // from there transport.write will give us number of how much is left
-  // Then we would take that number and put it in a new buffer and truncate it 
-  // from whatever is left in the new buffer we would then put that back in the old buffer
+    // First initialize the buffer which will be a global variable
+    // from there we would call the clientWrite timer
+    // after calling the timer we would then call transport.write
+    // from there transport.write will give us number of how much is left
+    // Then we would take that number and put it in a new buffer and truncate it
+    // from whatever is left in the new buffer we would then put that back in the old buffer
 
 
     // transfer number 17 //global var
@@ -480,13 +583,26 @@ implementation{
    }
 
    event void CommandHandler.closeClient(uint8_t dest, uint8_t srcPort, uint8_t destPort) {
+     uint8_t i;
+     socket_t tfd = MAX_NUM_OF_SOCKETS;
      dbg(TRANSPORT_CHANNEL, "Closing Client Node %d\n", TOS_NODE_ID);
      dbg(TRANSPORT_CHANNEL, "dest: %d\n", dest);
      dbg(TRANSPORT_CHANNEL, "srcPort: %d\n", srcPort);
      dbg(TRANSPORT_CHANNEL, "destPort: %d\n", destPort);
 
      //get fd based on src port, destport, and dest later
-     call Transport.close(fd);
+     for(i = 0; i < numSockets; i++) {
+       if(serAddrFromC[i].port == destPort && serAddrFromC[i].addr == dest) {
+         tfd = fd[i];
+         break;
+       }
+     }
+     if(tfd == MAX_NUM_OF_SOCKETS) {
+       dbg(TRANSPORT_CHANNEL, "Unable to close\n");
+       return;
+     }
+     call Transport.close(tfd);
+     /* call Transport.close(fd); */
    }
 
    event void CommandHandler.setAppServer(){}

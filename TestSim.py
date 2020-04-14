@@ -132,7 +132,14 @@ class TestSim:
         self.sendCMD(self.CMD_TEST_SERVER, address, "{0}".format(chr(port)));
 
     def testClient(self, id, destination, srcPort, destPort, transfer):
-        self.sendCMD(self.CMD_TEST_CLIENT, id, "{0}{1}{2}{3}".format(chr(destination), chr(srcPort), chr(destPort), chr(transfer)));
+        bottom = 0
+        top = 0
+        if(transfer>255):
+            top = transfer/256
+            bottom = transfer%256
+        else:
+            bottom = transfer
+        self.sendCMD(self.CMD_TEST_CLIENT, id, "{0}{1}{2}{3}{4}".format(chr(destination), chr(srcPort), chr(destPort), chr(top), chr(bottom)));
 
     def closeClient(self, id, destination, srcPort, destPort):
         self.sendCMD(self.CMD_CLOSE_CLIENT, id, "{0}{1}{2}".format(chr(destination), chr(srcPort), chr(destPort)));

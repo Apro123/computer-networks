@@ -57,7 +57,7 @@ implementation{
         neighborSize = call NeighborHandler.getSize();
 
 
-        if(currentSize == 0) {
+        /* if(currentSize == 0) { */
           for(i = 0; i < neighborSize; i++) {
             routingTable[i].dest = neighborIDs[i];
             routingTable[i].nextHop = neighborIDs[i];
@@ -68,7 +68,7 @@ implementation{
 
             currentSize += 1;
           }
-        } else {
+        /* } else {
           //find the neighbors and update them
           for(i = 0; i < currentSize; i++) {
             uint8_t j;
@@ -83,7 +83,7 @@ implementation{
             }
 
           }
-        }
+        } */
         return;
     }
 
@@ -144,7 +144,7 @@ implementation{
 
     command void DistanceVector.runTimer() {
       call tableTimer.startOneShot(INTERVAL_TIME - + (uint16_t) (call Random.rand16()%200));
-      call dropRow.startPeriodic(INTERVAL_TIME*32 + (uint16_t) (call Random.rand16()%200));
+      call dropRow.startPeriodic(INTERVAL_TIME*64 + (uint16_t) (call Random.rand16()%200));
     }
 
     event void tableTimer.fired() {
@@ -257,6 +257,7 @@ implementation{
         uint8_t hop = routingTable[i].nextHop;
         uint8_t count = routingTable[i].cost;
         if(routingTable[i].dest == pk.dest) {
+          /* dbg(TRANSPORT_CHANNEL, " checking node: %d, Node: %d\n", routingTable[i].dest, pk.dest); */
           if(count == 255) {
             return 256; //one more than 255 which is the number of possible nodes.
           }else {
@@ -264,6 +265,7 @@ implementation{
           }
         }
       }
+      /* dbg(TRANSPORT_CHANNEL, "adfter size: %d checking node: %d, Node: %d\n", currentSize, routingTable[i].dest, pk.dest); */
       return 256; //not found
     }
 
