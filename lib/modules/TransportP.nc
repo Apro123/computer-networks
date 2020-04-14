@@ -84,36 +84,52 @@ implementation {
           if(SOCKET_BUFFER_SIZE - sock.lastSent <= 12) {
             uint8_t tstore[SOCKET_BUFFER_SIZE - sock.lastSent];
             size = SOCKET_BUFFER_SIZE - sock.lastSent;
-            store = tstore;
-            for(j = 0; j < size; j++) {
-              store[j] = sock.sendBuff[sock.lastSent];
-              sock.lastSent += 1;
+            if(size < sock.effectiveWindow) {
+              store = tstore;
+              for(j = 0; j < size; j++) {
+                store[j] = sock.sendBuff[sock.lastSent];
+                sock.lastSent += 1;
+              }
+            } else {
+              return; //not enough space to send the data
             }
           } else {
             uint8_t tstore[12];
             size = 12;
-            store = tstore;
-            for(j = 0; j < size; j++) {
-              store[j] = sock.sendBuff[sock.lastSent];
-              sock.lastSent += 1;
+            if(size < sock.effectiveWindow) {
+              store = tstore;
+              for(j = 0; j < size; j++) {
+                store[j] = sock.sendBuff[sock.lastSent];
+                sock.lastSent += 1;
+              }
+            } else {
+              return; //not enough space to send the data
             }
           }
         } else {
           if(sock.lastWritten - sock.lastSent > 12) {
             uint8_t tstore[12];
             size = 12;
-            store = tstore;
-            for(j = 0; j < size; j++) {
-              store[j] = sock.sendBuff[sock.lastSent];
-              sock.lastSent += 1;
+            if(size < sock.effectiveWindow) {
+              store = tstore;
+              for(j = 0; j < size; j++) {
+                store[j] = sock.sendBuff[sock.lastSent];
+                sock.lastSent += 1;
+              }
+            } else {
+              return; //not enough space to send the data
             }
           } else {
             uint8_t tstore[sock.lastWritten - sock.lastSent];
             size = sock.lastWritten - sock.lastSent;
-            store = tstore;
-            for(j = 0; j < size; j++) {
-              store[j] = sock.sendBuff[sock.lastSent];
-              sock.lastSent += 1;
+            if(size < sock.effectiveWindow) {
+              store = tstore;
+              for(j = 0; j < size; j++) {
+                store[j] = sock.sendBuff[sock.lastSent];
+                sock.lastSent += 1;
+              }
+            } else {
+              return;
             }
           }
         }
@@ -384,16 +400,17 @@ implementation {
       if(sock.lastWritten == 128 && sock.lastAck != 0) {
         //wrap around
         sock.lastWritten = 0;
+      } else if((sock.lastWritten == 128 && sock.lastAck == 0) || sock.lastWritten+1 == sock.lastAck) {
+        break;
       }
       sock.sendBuff[sock.lastWritten] = buff[i-1];
       /* dbg(TRANSPORT_CHANNEL, "writing data %d at index: %d\n", sock.sendBuff[sock.lastWritten], sock.lastWritten); */
       sock.lastWritten += 1;
 
 
-      if((sock.lastWritten == 128 && sock.lastAck == 0) || sock.lastWritten + 1 == sock.lastAck) {
-        /* dbg(TRANSPORT_CHANNEL, "too much data in socket breaking now\n"); */
+      /* if((sock.lastWritten == 128 && sock.lastAck == 0) || sock.lastWritten + 1 == sock.lastAck) {
         break;
-      }
+      } */
     }
 
     call sockets.set(fd, sock);
@@ -401,7 +418,7 @@ implementation {
 
     isRunning = call buffTimer.isRunning();
     if (!isRunning) {
-      call buffTimer.startPeriodic(1000 + (uint16_t)(call Random.rand16()%500));
+      call buffTimer.startPeriodic(2000 + (uint16_t)(call Random.rand16()%500));
     }
 
 
@@ -518,6 +535,7 @@ implementation {
       sock.lastWritten = 0;
       sock.lastAck = 0;
       sock.lastSent = 0;
+      sock.effectiveWindow = 128;
 
       if(sock.state == SYN_SENT) {
         pack tempPack;
@@ -667,9 +685,10 @@ implementation {
         tcpTemp.advertisedWindow = sock.lastRcvd - sock.lastRead;
       }
 
+      /* dbg(TRANSPORT_CHANNEL, "adv %d\n", tcpTemp.advertisedWindow); */
 
       //congestion control
-      tcpTemp.advertisedWindow = tcpTemp.advertisedWindow/numConnections;
+      tcpTemp.advertisedWindow = (SOCKET_BUFFER_SIZE-tcpTemp.advertisedWindow)/numConnections;
 
       memcpy(&(packTemp.payload), &(tcpTemp), PACKET_MAX_PAYLOAD_SIZE);
 
@@ -690,6 +709,7 @@ implementation {
       //client
       //put advertised window into effective window maybe later
       sock.lastAck = t->ack;
+      sock.effectiveWindow = t->advertisedWindow;
       call sockets.set(fd,sock);
     }
 

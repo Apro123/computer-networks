@@ -27,9 +27,13 @@ def main():
 
     s.runTime(300);
     s.testServer(2, destPort);
+    s.runTime(1);
+    s.testServer(2, destPort+2);
     s.runTime(60);
     s.testClient(3, 2, 20, destPort, 140);
-    s.runTime(300);
+    s.runTime(1);
+    s.testClient(1,2,40,destPort+2, 140);
+    s.runTime(600);
     s.closeClient(3, 2, 20, destPort);
     s.runTime(100);
 

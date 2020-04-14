@@ -23,13 +23,15 @@ def main():
 
     # After sending a ping, simulate a little to prevent collision.
 
-    s.runTime(300);
-    s.testServer(1);
-    s.runTime(60);
+    destPort = 235
 
-    s.testClient(13);
-    s.runTime(1);
-    s.runTime(1000);
+    s.runTime(300);
+    s.testServer(2, destPort);
+    s.runTime(60);
+    s.testClient(3, 2, 20, destPort, 140);
+    s.runTime(300);
+    s.closeClient(3, 2, 20, destPort);
+    s.runTime(100);
 
 
 
