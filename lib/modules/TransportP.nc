@@ -32,6 +32,7 @@ implementation {
   /* pack bufferPack; */
   socket_t toClose = MAX_NUM_OF_SOCKETS;
   uint8_t numConnections = 0; //used in server side
+  uint32_t INTERVAL_TIME = 4500;
 
   event void closeTimer.fired() {
     socket_store_t temp = call sockets.get(toClose);
@@ -90,7 +91,9 @@ implementation {
                 store[j] = sock.sendBuff[sock.lastSent];
                 sock.lastSent += 1;
               }
+              INTERVAL_TIME -= 100;
             } else {
+              INTERVAL_TIME += 500;
               return; //not enough space to send the data
             }
           } else {
@@ -102,7 +105,9 @@ implementation {
                 store[j] = sock.sendBuff[sock.lastSent];
                 sock.lastSent += 1;
               }
+              INTERVAL_TIME -= 100;
             } else {
+              INTERVAL_TIME += 500;
               return; //not enough space to send the data
             }
           }
@@ -116,7 +121,9 @@ implementation {
                 store[j] = sock.sendBuff[sock.lastSent];
                 sock.lastSent += 1;
               }
+              INTERVAL_TIME -= 100;
             } else {
+              INTERVAL_TIME += 500;
               return; //not enough space to send the data
             }
           } else {
@@ -128,8 +135,10 @@ implementation {
                 store[j] = sock.sendBuff[sock.lastSent];
                 sock.lastSent += 1;
               }
+              INTERVAL_TIME -= 100;
             } else {
-              return;
+              INTERVAL_TIME += 500;
+              return; //not enough space to send the data
             }
           }
         }
@@ -191,10 +200,10 @@ implementation {
 
     }
 
-    if(done == call sockets.size()) {
-      call buffTimer.stop();
+    call buffTimer.stop();
+    if(done != call sockets.size()) {
+      call buffTimer.startPeriodic(INTERVAL_TIME+(uint16_t)(call Random.rand16()%500));
     }
-
   }
 
   command bool Transport.isEstablished(socket_t t) {
@@ -418,7 +427,7 @@ implementation {
 
     isRunning = call buffTimer.isRunning();
     if (!isRunning) {
-      call buffTimer.startPeriodic(2000 + (uint16_t)(call Random.rand16()%500));
+      call buffTimer.startPeriodic(INTERVAL_TIME + (uint16_t)(call Random.rand16()%500));
     }
 
 

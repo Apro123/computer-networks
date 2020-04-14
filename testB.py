@@ -8,10 +8,10 @@ def main():
     s.runTime(1);
 
     # Load the the layout of the network.
-    s.loadTopo("pizza.topo");
+    s.loadTopo("long_line.topo"); # pizza
 
     # Add a noise model to all of the motes.
-    s.loadNoise("meyer-heavy.txt");
+    s.loadNoise("no_noise.txt");
 
     # Turn on all of the sensors.
     s.bootAll();

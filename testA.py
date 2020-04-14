@@ -35,6 +35,8 @@ def main():
     s.testClient(1,2,40,destPort+2, 140);
     s.runTime(600);
     s.closeClient(3, 2, 20, destPort);
+    s.runTime(1);
+    s.closeClient(1, 2, 40, destPort+2);
     s.runTime(100);
 
     # s.runTime(300);
