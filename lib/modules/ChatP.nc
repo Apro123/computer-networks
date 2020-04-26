@@ -55,4 +55,8 @@ implementation {
         return FAIL;
     }
 
+    command error_t Chat.startChatClient(uint8_t port, uint8_t* username) {
+        socket_t sock;
+    }
+
 }
