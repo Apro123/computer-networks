@@ -57,6 +57,34 @@ implementation {
 
     command error_t Chat.startChatClient(uint8_t port, uint8_t* username) {
         socket_t sock;
+        socket_addr_t srcAddr;
+        socket_addr_t destAddr; 
+        uint8_t buff[SOCKET_BUFFER_SIZE];
+        sock = call Transport.socket();
+
+        srcAddr.port = port;
+        srcAddr.addr = TOS_NODE_ID;
+
+        destAddr.port = 41; // connect to port 41
+        destAddr.addr= 1; // node 1
+
+        if(sock != NULL) {
+
+            dbg(TRANSPORT_CHANNEL, "This is socket %d\n", sock);
+
+            if (call Transport.bind(sock, &srcAddr) == SUCCESS) {
+                
+                dbg(TRANSPORT_CHANNEL, "Socket %d has binded to address: %d, port: %d\n", sock, srcAddr.addr, srcAddr.port);
+                dbg(TRANSPORT_CHANNEL, "Attempting to connect to server with port %d at address %d\n", destAddr.port, destAddr.addr);
+
+                if(call Transport.connect(sock, &srcAddr) == SUCCESS) {
+                    dbg(TRANSPORT_CHANNEL, "Socket %d connected succesfully\n", sock);
+                }
+
+
+            }
+        }
+
     }
 
 }
