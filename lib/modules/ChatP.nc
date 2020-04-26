@@ -28,19 +28,31 @@ implementation {
     
         sockAddr.port = port; 
         sockAddr.addr = TOS_NODE_ID;
-
         sock = call Tranport.socket();
+        
+        serverTimerisRunning = call serverTimer.isRunning();
 
         if(sock != NULL) {
             dbg(TRANSPORT_CHANNEL, "This is socket %d\n", sock);
 
             if(call Transport.bind(sock, &address) = SUCCESS) {
                 dbg(TRANSPORT_CHANNEL, "Socket %d has successfully binded to address: %d, port: %d\n", sock, sockAddr.addr, sockAddr.port);
+                
                 if(call Transport.listen(sock) == SUCCESS) {
-                    dbg(TRANSPORT_CHANNEL)
+                    dbg(TRANSPORT_CHANNEL, "Socket %d is now in LISTEN state\n", sock);
+
+                    call connections.pushback(sock); // this socket is part of server connections 
+
+                    if(!serverTimerisRunning) {
+                        call serverTimer.startPeriodic(500); // 500 is just a random number
+
+                        return SUCCESS
+                    }
                 }
             }
         }
+        
+        return FAIL;
     }
 
 }
