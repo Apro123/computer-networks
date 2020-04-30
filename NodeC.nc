@@ -71,6 +71,6 @@ implementation {
     components new TimerMilliC() as stopWait;
     Node.stopWait -> stopWait;
 
-    components ChatC;
-    Node.Chat->ChatC;
+    // components ChatC;
+    // Node.Chat->ChatC;
 }

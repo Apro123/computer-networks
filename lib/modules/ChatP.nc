@@ -10,7 +10,7 @@ module ChatP {
     
     uses interface Packet;
     uses interface Transport;
-    uses interface SimpleSend as Sender;
+
 
     uses interface Timer<TMilli> serverTimer;
     uses interface Timer<TMilli> clientTimer;
@@ -60,6 +60,7 @@ implementation {
         socket_addr_t srcAddr;
         socket_addr_t destAddr; 
         uint8_t buff[SOCKET_BUFFER_SIZE];
+        uint8_t write;
         sock = call Transport.socket();
 
         srcAddr.port = port;
@@ -79,11 +80,19 @@ implementation {
 
                 if(call Transport.connect(sock, &srcAddr) == SUCCESS) {
                     dbg(TRANSPORT_CHANNEL, "Socket %d connected succesfully\n", sock);
+
+                    write = call Transport.write(sock, buff, (char*)buff);
+
+                    return SUCCESS
+
                 }
 
 
             }
         }
+        
+        dbg(TRANSPORT_CHANNEL, "Error! Socket %d connection failed", sock);
+        return FAIL;
 
     }
 
