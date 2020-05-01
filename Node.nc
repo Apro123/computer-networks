@@ -45,6 +45,8 @@ module Node{
 
    uses interface Timer<TMilli> as printSocketInfo; //read data from socket server
    uses interface Timer<TMilli> as clientWrite; //wrtie data into socket client
+
+   uses interface Chat;
 }
 
 implementation{
