@@ -45,7 +45,7 @@ implementation {
         if(call Transport.socket() != NULL) {
             dbg(TRANSPORT_CHANNEL, "This is socket %d\n", sock);
 
-            if(call Transport.bind(sock, &sockAddr) = SUCCESS) {
+            if(call Transport.bind(sock, &sockAddr) == SUCCESS) {
                 dbg(TRANSPORT_CHANNEL, "Socket %d has successfully binded to address: %d, port: %d\n", sock, sockAddr.addr, sockAddr.port);
                 
                 if(call Transport.listen(sock) == SUCCESS) {
@@ -56,7 +56,7 @@ implementation {
                     if(!serverTimerisRunning) {
                         // call serverTimer.startPeriodic(500); // 500 is just a random number
 
-                        return SUCCESS
+                        return SUCCESS;
                     }
                 }
             }
@@ -91,7 +91,7 @@ implementation {
                 if(call Transport.connect(sock, &srcAddr) == SUCCESS) {
                     dbg(TRANSPORT_CHANNEL, "Socket %d connected succesfully\n", sock);
 
-                    write = call Transport.write(sock, buff, (char*)buff);
+                    write = call Transport.write(sock, buff, strlen((char*)buff));
 
                 }
             }
