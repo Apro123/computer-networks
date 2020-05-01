@@ -24,7 +24,26 @@ implementation {
 
 
     event void serverTimer.fired() {
-        dbg(TRANSPORT_CHANNEL, "Server Timer started");
+        socket_t sock;
+        socket_t fd;
+        socket_t fdAccept;
+        uint8_t readLen = 0;
+        uint8_t commandLen = 0;
+        uint8_t buff[SOCKET_BUFFER_SIZE];
+
+        uint8_t i;
+       
+        dbg(TRANSPORT_CHANNEL, "Server Timer started\n");       
+       
+        // for(i = 0; i < call connections.size(); i++) {
+        //     fd = call connections.get(i);
+        //     sock = call Transport.newlyEstablished();
+
+        //     if(sock.state == LISTEN){
+        //         fdAccept = call Transport.accept(fd);
+        //     }
+        // }
+
     }
 
     event void clientTimer.fired() {
@@ -92,7 +111,10 @@ implementation {
                     dbg(TRANSPORT_CHANNEL, "Socket %d connected succesfully\n", sock);
 
                     write = call Transport.write(sock, buff, strlen((char*)buff));
-
+                    sprintf(buff, "Hello %s%c%c%c%c%c\n", (char*)username, 92, 114, 92, 110, '\0'); // /r/n 
+                    // 92 = /
+                    // 114 = r
+                    // 110 = n
                 }
             }
             return SUCCESS;
@@ -100,7 +122,22 @@ implementation {
         
         dbg(TRANSPORT_CHANNEL, "Error! Socket %d connection failed", sock);
         return FAIL;
+    }
 
+    command error_t Chat.broadcast(uint8_t* message) {
+        uint8_t write;
+        char msg[SOCKET_BUFFER_SIZE];
+        
+        write = call Transport.write(client, msg, strlen((char*)msg));
+        dbg(TRANSPORT_CHANNEL, "msg %s%c%c%c%c%c\n", (char*)message, 92, 114, 92, 110, '\0');
+    }
+
+    command error_t Chat.unicast(uint8_t* username, uint8_t* message) {
+        uint8_t write;
+        char msg[SOCKET_BUFFER_SIZE];
+
+        write = call Transport.write(client, msg, strlen((char*)msg));
+        dbg(TRANSPORT_CHANNEL, "To client %s msg %s%c%c%c%c%c\n", (char*)username, (char*)message, 92, 114, 92, 110,'\0');
     }
 
 }
