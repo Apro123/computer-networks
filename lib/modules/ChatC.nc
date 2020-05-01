@@ -14,20 +14,24 @@ configuration ChatC {
 implementation {
     components ChatP;
     Chat = ChatP;
-
-    components ActiveMessageC;
-    ChatP.Packet->ActiveMessageC;
-
+    // components ActiveMessageC;
+    // ChatP.Packet -> ActiveMessageC;
     components new SimpleSendC(AM_PACK);
-    TransportP.Sender->SimpleSendC;
+    ChatP.Sender -> SimpleSendC;
 
-    components new ListC(socket_t, MAX_NUM_OF_SOCKETS) as connections;
-    ChatP.connections->connections;
+    // components ActiveMessageC;
+    // ChatP.Packet -> ActiveMessageC;
+
+    components TransportC;
+    ChatP.Transport->TransportC;
 
     components new TimerMilliC() as serverTimer;
-    ChatP.serverTimer->serverTimer;
+    ChatP.serverTimer -> serverTimer;
 
     components new TimerMilliC() as clientTimer;
-    ChatP.clientTimer->clientTimer;
+    ChatP.clientTimer -> clientTimer;
+
+    components new ListC(socket_t, MAX_NUM_OF_SOCKETS) as connections;
+    ChatP.connections -> connections;
 
 }
