@@ -111,7 +111,8 @@ implementation {
                     dbg(TRANSPORT_CHANNEL, "Socket %d connected succesfully\n", sock);
 
                     write = call Transport.write(sock, buff, strlen((char*)buff));
-                    sprintf(buff, "Hello %s%c%c%c%c%c\n", (char*)username, 92, 114, 92, 110, '\0'); // /r/n 
+                    // sprintf(buff, "Hello %s%c%c%c%c%c\n", (char*)username, 92, 114, 92, 110, '\0'); // /r/n 
+                    dbg(TRANSPORT_CHANNEL, "Hello %s %c%c%c%c%c", (char*)username, 92, 114, 92, 110, '\0'); // /r/n
                     // 92 = /
                     // 114 = r
                     // 110 = n
