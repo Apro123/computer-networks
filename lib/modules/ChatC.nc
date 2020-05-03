@@ -26,12 +26,18 @@ implementation {
     ChatP.Transport->TransportC;
 
     components new TimerMilliC() as serverTimer;
-    ChatP.serverTimer -> serverTimer;
+    ChatP.nameTimer -> serverTimer;
 
-    components new TimerMilliC() as clientTimer;
-    ChatP.clientTimer -> clientTimer;
+    /* components new TimerMilliC() as clientTimer;
+    ChatP.clientTimer -> clientTimer; */
 
-    components new ListC(socket_t, MAX_NUM_OF_SOCKETS) as connections;
-    ChatP.connections -> connections;
+    components new TimerMilliC() as readTimer;
+    ChatP.readTimer -> readTimer;
+
+    components RandomC as Random;
+    ChatP.Random -> Random;
+
+    /* components new ListC(socket_t, MAX_NUM_OF_SOCKETS) as connections;
+    ChatP.connections -> connections; */
 
 }

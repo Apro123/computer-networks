@@ -64,10 +64,8 @@ implementation{
    socket_addr_t serAddrFromC[MAX_NUM_OF_SOCKETS];//client
    uint8_t numSockets = 0; //client
 
-   /* uint8_t* buffData; //client */
+   bool CHAT = FALSE;
 
-   /* uint16_t lastBitWritten;
-   uint8_t buffData; */
 
    // Prototypes
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
@@ -316,13 +314,19 @@ implementation{
                //client
                dbg(TRANSPORT_CHANNEL, "CLIENT CONNECTION ESTABLISHED\n");
                call stopWait.stop();
-               call clientWrite.startPeriodic(INTERVAL_TIME*4 + (uint16_t) (call Random.rand16()%200));
+               if(!CHAT) {
+                 call clientWrite.startPeriodic(INTERVAL_TIME*4 + (uint16_t) (call Random.rand16()%200));
+               } else {
+                 call Chat.newConnection(0);
+               }
              } else {
                //server
                dbg(TRANSPORT_CHANNEL, "SERVER CONNECTION ESTABLISHED\n");
                call stopWait.stop();
                call printSocketInfo.stop();
-               call stopWait.startPeriodic(INTERVAL_TIME*3 + (uint16_t) (call Random.rand16()%200));
+               if(!CHAT) {
+                 call stopWait.startPeriodic(INTERVAL_TIME*3 + (uint16_t) (call Random.rand16()%200));
+               }
              }
              //add into accepted sockets
              newfd = call Transport.getNewlyEstablished();
@@ -330,10 +334,16 @@ implementation{
              if(newfd != NULL) {
                uint8_t j;
                uint8_t size;
+               socket_t newSock;
                size = (uint8_t) newfd[0];
                /* dbg(TRANSPORT_CHANNEL, "newfd not null\n"); */
                for(j=0; j < size; j++) {
                  /* dbg(TRANSPORT_CHANNEL, "adding socket_t : %d\n", newfd[j+1]); */
+                 if(CHAT) {
+                   newSock = newfd[j+1];
+                   call Chat.newConnection(newSock);
+                   break;
+                 }
                  call acceptedSockets.pushback(newfd[j+1]);
                }
                /* call acceptedSockets.pushback(newfd); */
@@ -545,40 +555,6 @@ implementation{
        dbg(TRANSPORT_CHANNEL, "binding failed\n");
      }
 
-
-
-     //buff data is initialized
-
-     //client write is called later
-
-    /* call clientWrite.startPeriodic(INTERVAL_TIME*8 + (uint16_t) (call Random.rand16()%200)); */
-
-    // lastBitWritten = call Transport.write(fd, (uint8_t*) transfer, (uint16_t) 15);
-    // dbg(TRANSPORT_CHANNEL, "the last bit written is %d\n", lastBitWritten);
-
-
-    // for (i = 0; i < transfer; i++) {
-    //   buffer[i] = call Transport.write(fd, (uint8_t *) transfer, 15);
-    //   dbg(TRANSPORT_CHANNEL, "buffer includes %d\n", buffer[i]);
-    // }
-    /* lastBitWritten = call Transport.write(fd, (uint8_t*) transfer, sizeof(buffer)); */
-
-    // First initialize the buffer which will be a global variable
-    // from there we would call the clientWrite timer
-    // after calling the timer we would then call transport.write
-    // from there transport.write will give us number of how much is left
-    // Then we would take that number and put it in a new buffer and truncate it
-    // from whatever is left in the new buffer we would then put that back in the old buffer
-
-
-    // transfer number 17 //global var
-    // uint8_t * buff[transfer] // in this method
-    // Then push into the buff
-
-    // in the write timer
-    // lastbitwritteninto the socket = 13 // global variable and 13 because uint8_t
-    // 14, 15, 16, ... 17 
-
    }
 
    event void CommandHandler.closeClient(uint8_t dest, uint8_t srcPort, uint8_t destPort) {
@@ -604,9 +580,49 @@ implementation{
      /* call Transport.close(fd); */
    }
 
-   event void CommandHandler.setAppServer(){}
+   event void CommandHandler.setAppServer(uint8_t port){
+     dbg(CHAT_CHANNEL, "set app server\n");
+     dbg(CHAT_CHANNEL, "port: %d\n", port);
+     CHAT = TRUE;
+     call Chat.startChatServer(port);
+   }
 
-   event void CommandHandler.setAppClient(){}
+   event void CommandHandler.setAppClient(uint8_t* msg){
+     uint8_t i;
+     uint8_t cmd[10];
+     uint8_t rest[100];
+     uint8_t restSize;
+     uint8_t cmdSize;
+     bool cmdFlag = FALSE;
+     CHAT = TRUE;
+     dbg(CHAT_CHANNEL, "set app client\n");
+     dbg(CHAT_CHANNEL, "msg: %s\n", msg);
+     i = 0;
+     while(msg[i] != '\n'){
+       if(!cmdFlag) {
+         if(msg[i] == ' ') {
+           cmdSize = i;
+           cmdFlag = TRUE;
+         } else {
+           cmd[i] = msg[i];
+         }
+       } else {
+         if(msg[i] != '\r' || msg[i] != '\n') {
+           rest[restSize] = msg[i];
+           restSize += 1;
+         }
+       }
+       /* dbg(CHAT_CHANNEL, "msg: %c\n", msg[i]); */
+       i++;
+     }
+     restSize--;
+
+     call Chat.handleCommand(cmd, cmdSize, rest, restSize, msg);
+
+     /* dbg(CHAT_CHANNEL, "cmd: %s, size: %d\n", cmd, cmdSize); */
+     /* dbg(CHAT_CHANNEL, "rest: -%s-, restSize: -%d-\n", rest, restSize); */
+
+   }
 
    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t protocol, uint16_t seq, uint8_t* payload, uint8_t length){
       Package->src = src;

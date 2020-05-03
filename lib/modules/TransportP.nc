@@ -33,6 +33,8 @@ implementation {
   socket_t toClose = MAX_NUM_OF_SOCKETS;
   uint8_t numConnections = 0; //used in server side
 
+  uint8_t chatPort = 41;
+
   event void closeTimer.fired() {
     socket_store_t temp = call sockets.get(toClose);
     dbg(TRANSPORT_CHANNEL, "setting socket to closed\n");
@@ -53,7 +55,7 @@ implementation {
       uint8_t size=0;
       uint16_t nextHop;
 
-      /* dbg(TRANSPORT_CHANNEL, "last written: %hhu, last sent: %hhu \n", sock.lastWritten, sock.lastSent); */
+      /* dbg(TRANSPORT_CHANNEL, "sock #%d,, sock destPort %d, last written: %hhu, last sent: %hhu , dest node %d\n",i, sock.dest.port, sock.lastWritten, sock.lastSent, sock.dest.addr); */
 
       if(sock.lastWritten != sock.lastSent) { //new data
         if(sock.lastSent == 128) {
@@ -151,6 +153,7 @@ implementation {
         } */
 
         tempPack.dest = sock.dest.addr;
+        /* dbg(CHAT_CHANNEL, "dest node: %d, dest port %d\n", sock.dest.addr, sock.dest.port); */
         tempPack.src = TOS_NODE_ID;
         //amount of data to send
         tempPack.TTL = size; // sending data
@@ -214,9 +217,8 @@ implementation {
       newList[0] = listSize;
 
       for(i = 0; i < listSize; i++) {
-        newList[i+1] = call newEstaSock.get(i);
+        newList[i+1] = call newEstaSock.popfront();
       }
-
       return newList;
     } else {
       return NULL;
@@ -253,7 +255,8 @@ implementation {
       packTempSA.protocol = 4;
       prev = (tcpHeader*) package->payload;
 
-      tcpTempSA.srcPort = prev->destPort; //flip the src and dest port
+      chatPort += 1; //new port for chat
+      tcpTempSA.srcPort = chatPort; //flip the src and dest port
       tcpTempSA.destPort = prev->srcPort;
 
       if(!sockSeq[fd]) {
@@ -394,7 +397,7 @@ implementation {
     socket_store_t sock = call sockets.get(fd);
     uint16_t i;
 
-    /* dbg(TRANSPORT_CHANNEL, "in transport write. bufflen: %d\n", bufflen); */
+    dbg(TRANSPORT_CHANNEL, "in transport write. sending to node: %d, to port %d\n", sock.dest.addr, sock.dest.port);
 
     for(i = 1; i <= bufflen; i++) {
       if(sock.lastWritten == 128 && sock.lastAck != 0) {
@@ -418,7 +421,7 @@ implementation {
 
     isRunning = call buffTimer.isRunning();
     if (!isRunning) {
-      call buffTimer.startPeriodic(2000 + (uint16_t)(call Random.rand16()%500));
+      call buffTimer.startPeriodic(1500 + (uint16_t)(call Random.rand16()%500));
     }
 
 
@@ -460,6 +463,7 @@ implementation {
     bool found;
     uint8_t i;
     tcpHeader* t = (tcpHeader*) package->payload;
+    dbg(TRANSPORT_CHANNEL, "dest is %d, flag is %d dest port:%d\n", package->dest, t->flag, t->destPort);
 
     if(package->dest != TOS_NODE_ID) {
       uint16_t nextHop;
@@ -478,7 +482,7 @@ implementation {
 
     //find local socket_store_t based on dest port
     found = FALSE;
-    for(i = 0; i <= socketIndex; i++) {
+    for(i = 0; i < call sockets.size(); i++) {
       sock = call sockets.get(i);
       if(sock.src == t->destPort) {
         found = TRUE;
@@ -508,21 +512,26 @@ implementation {
       }
     } else if(t->flag == SYN) {
       //server
+      socket_store_t newSock;
 
-      sock.lastRead = 0;
-      sock.lastRcvd = 0;
-      sock.nextExpected = 0;
+      newSock.lastRead = 0;
+      newSock.lastRcvd = 0;
+      newSock.nextExpected = 0;
+      newSock.lastWritten = 0;
+      newSock.lastSent = 0;
+      newSock.lastAck = 0;
 
       if(sock.state == LISTEN) {
 
-        sock.state = SYN_RCVD;
+        newSock.state = SYN_RCVD;
         dbg(TRANSPORT_CHANNEL, "socket state changed to SYN_RCVD\n");
-        sock.dest.addr = package->src;
-        sock.dest.port = t->srcPort;
-        sock.src = t->destPort;
-        call sockets.set(fd, sock);
+        newSock.dest.addr = package->src;
+        newSock.dest.port = t->srcPort;
+        newSock.src = chatPort+1;
+        call sockets.pushback(newSock);
+        dbg(TRANSPORT_CHANNEL, "size of sockets %d\n", call sockets.size());
 
-        fireSynAck(fd, package);
+        fireSynAck(fd+numConnections+1, package);
 
         return 1;
       } else {
@@ -532,10 +541,14 @@ implementation {
     } else if(t-> flag == SYN_ACK) {
       //client
 
+      sock.lastRead = 0;
+      sock.lastRcvd = 0;
+      sock.nextExpected = 0;
       sock.lastWritten = 0;
       sock.lastAck = 0;
       sock.lastSent = 0;
       sock.effectiveWindow = 128;
+      sock.dest.port = t->srcPort; //update port for chat
 
       if(sock.state == SYN_SENT) {
         pack tempPack;
@@ -544,6 +557,7 @@ implementation {
 
         sock.state = ESTABLISHED; ///client connection established, call the client write timer periodically here
         /* dbg(TRANSPORT_CHANNEL, "client socket state changed to ESTABLISHED\n"); */
+        numConnections += 1;
         call sockets.set(fd, sock);
 
         //send ack packet to server
@@ -688,6 +702,9 @@ implementation {
       /* dbg(TRANSPORT_CHANNEL, "adv %d\n", tcpTemp.advertisedWindow); */
 
       //congestion control
+      if(numConnections == 0) {
+        numConnections = 1;
+      }
       tcpTemp.advertisedWindow = (SOCKET_BUFFER_SIZE-tcpTemp.advertisedWindow)/numConnections;
 
       memcpy(&(packTemp.payload), &(tcpTemp), PACKET_MAX_PAYLOAD_SIZE);

@@ -2,8 +2,10 @@
 #include "../../includes/socket.h"
 
 interface Chat {
-    command error_t startChatServer(uint8_t port);
-    command error_t startChatClient(uint8_t port, uint8_t* username);
-    command error_t broadcast(uint8_t* message);
-    command error_t unicast(uint8_t* username, uint8_t* message);
+    command void startChatServer(uint8_t port);
+    command void startChatClient(uint8_t port, uint8_t* username);
+    command void broadcast(uint8_t* message);
+    command void unicast(uint8_t* username, uint8_t* message);
+    command void handleCommand(uint8_t* cmd, uint8_t cmdSize, uint8_t* rest, uint8_t restSize, uint8_t* fullMsg);
+    command void newConnection(socket_t newfd);
 }

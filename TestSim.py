@@ -16,6 +16,8 @@ class TestSim:
     CMD_TEST_CLIENT=4
     CMD_TEST_SERVER=5
     CMD_CLOSE_CLIENT=6
+    CMD_APP_SERVER=10
+    CMD_APP_CLIENT=11
 
     # CHANNELS - see includes/channels.h
     COMMAND_CHANNEL="command";
@@ -30,6 +32,9 @@ class TestSim:
 
     # Project 3
     TRANSPORT_CHANNEL="transport";
+
+    # Project 4
+    CHAT_CHANNEL="chat";
 
     # Personal Debuggin Channels for some of the additional models implemented.
     HASHMAP_CHANNEL="hashmap";
@@ -143,6 +148,12 @@ class TestSim:
 
     def closeClient(self, id, destination, srcPort, destPort):
         self.sendCMD(self.CMD_CLOSE_CLIENT, id, "{0}{1}{2}".format(chr(destination), chr(srcPort), chr(destPort)));
+
+    def appServer(self,id, port=41):
+        self.sendCMD(self.CMD_APP_SERVER, id, "{0}".format(chr(port)));
+
+    def appClient(self,id,msg):
+        self.sendCMD(self.CMD_APP_CLIENT, id, msg);
 
     def addChannel(self, channelName, out=sys.stdout):
         print 'Adding Channel', channelName;
